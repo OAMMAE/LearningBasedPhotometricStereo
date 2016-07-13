@@ -6,10 +6,47 @@
 
 namespace PhotometricStereo
 {
-	void CLearningBasedPhotometricStereo::setObservedVes(cv::Vec3d observedVec)
+	void CLearningBasedPhotometricStereo::init(std::vector<cv::Vec3d> lightVecList, cv::Vec3d referenceVec, cv::Vec3d observedVec)
+	{
+		m_lightVecList = lightVecList;
+		m_referenceVec = referenceVec;
+		m_observedVec = observedVec;
+		m_featureList.reserve(m_listReserveSize);
+		m_ratioFeatureList.reserve(m_listReserveSize);
+		m_responseList.reserve(m_listReserveSize);
+	}
+
+#pragma region Get/Set Property
+	std::vector<cv::Vec3d> CLearningBasedPhotometricStereo::getLightVecList()
+	{
+		return m_lightVecList;
+	}
+
+	void CLearningBasedPhotometricStereo::setLightVecList(std::vector<cv::Vec3d> lightVecList)
+	{
+		m_lightVecList = lightVecList;
+	}
+
+	cv::Vec3d CLearningBasedPhotometricStereo::getReferenceVec()
+	{
+		return m_referenceVec;
+	}
+
+	void CLearningBasedPhotometricStereo::setReferenceVec(cv::Vec3d referenceVec)
+	{
+		m_referenceVec = referenceVec;
+	}
+
+	cv::Vec3d CLearningBasedPhotometricStereo::getObservedVec()
+	{
+		return m_observedVec;
+	}
+
+	void CLearningBasedPhotometricStereo::setObservedVec(cv::Vec3d observedVec)
 	{
 		m_observedVec = observedVec;
 	}
+#pragma endregion
 
 	/*
 	* FeatureList型をMat型に変形する。
@@ -44,6 +81,42 @@ namespace PhotometricStereo
 			}
 			return m;
 		}
+	}
+
+	/*
+	* featureListの中身のポインターを全て解放し、featureListのcapacityも0にする
+	*/
+	void CLearningBasedPhotometricStereo::releaseFeatureList(FeatureList & featureList)
+	{
+		//responselistの解放
+		if (!featureList.empty())
+		{
+			const int nFeatures = featureList.size();
+			for (int i = 0; i < nFeatures; ++i)
+			{
+				delete featureList.at(i);
+			}
+		}
+		featureList.clear();
+		featureList.shrink_to_fit();
+	}
+
+	/*
+	* responseListの中身のポインターを全て解放し、responseListのcapacityも0にする
+	*/
+	void CLearningBasedPhotometricStereo::releaseResponseList(ResponseList & responseList)
+	{
+		//responselistの解放
+		if (!responseList.empty())
+		{
+			const int nResponses = responseList.size();
+			for (int i = 0; i < nResponses; ++i)
+			{
+				delete responseList.at(i);
+			}
+		}
+		responseList.clear();
+		responseList.shrink_to_fit();
 	}
 
 	cv::Mat CLearningBasedPhotometricStereo::matNormalizing(cv::Mat inputMat)
@@ -170,7 +243,7 @@ namespace PhotometricStereo
 		return true;
 	}
 
-	bool CLearningBasedPhotometricStereo::readSyntheticImage4Train(FeatureList & featureList, FeatureList & ratioFeatureList, ResponseList & responseList, std::string filePath, double sigma)
+	bool CLearningBasedPhotometricStereo::syntheticImageLoader4Train(std::string filePath, double sigma)
 	{
 		cv::Mat inputMat = cv::imread(filePath);
 		int nLigthCount = m_lightVecList.size();
@@ -242,9 +315,9 @@ namespace PhotometricStereo
 
 						}
 					}
-					featureList.push_back(f);
-					ratioFeatureList.push_back(f2);
-					responseList.push_back(r);
+					m_featureList.push_back(f);
+					m_ratioFeatureList.push_back(f2);
+					m_responseList.push_back(r);
 				}
 				else
 				{
@@ -255,10 +328,13 @@ namespace PhotometricStereo
 			}
 		}
 
+		m_featureList.shrink_to_fit();
+		m_ratioFeatureList.shrink_to_fit();
+		m_responseList.shrink_to_fit();
 		return true;
 	}
 
-	bool CLearningBasedPhotometricStereo::readSyntheticImage4Test(FeatureList & featureList, FeatureList & ratioFeatureList, std::string inFilePath, std::string outFolderPath, double sigma, bool albedoHandler, std::string textureFilePath)
+	bool CLearningBasedPhotometricStereo::syntheticImageLoader4Test(FeatureList & featureList, FeatureList & ratioFeatureList, std::string inFilePath, std::string outFolderPath, double sigma, bool albedoHandler, std::string textureFilePath)
 	{
 		cv::Mat inputMat = cv::imread(inFilePath);
 		int nLigthCount = m_lightVecList.size();
@@ -393,11 +469,10 @@ namespace PhotometricStereo
 				ratioFeatureList.push_back(f2);
 			}
 		}
-
 		return true;
 	}
 
-	bool CLearningBasedPhotometricStereo::readRealImage4Test(FeatureList & featureList, FeatureList & ratioFeatureList, std::string inFolderPath, std::vector<std::string> filePathList, std::string referenceFilePath, std::string outFilePath, int nLigthCount, std::vector<double> lightIntList, double referenceLightInt, bool is16bit)
+	bool CLearningBasedPhotometricStereo::realImageLoader4Test(FeatureList & featureList, FeatureList & ratioFeatureList, std::string inFolderPath, std::vector<std::string> fileNameList, std::string referenceFileName, std::string outFolderPath, std::vector<double> lightIntList, double referenceLightInt, bool is16bit)
 	{
 		cv::Mat normalMat = cv::imread(inFolderPath + "Normal_gt.png");
 		if (normalMat.data == NULL)
@@ -413,7 +488,9 @@ namespace PhotometricStereo
 			return false;
 		}
 
-		if (nLigthCount != filePathList.size())
+		int nLigthCount = lightIntList.size();
+
+		if (nLigthCount != fileNameList.size())
 		{
 			std::cout << "readRealImage4Test:入力画像数が不正\n";
 			return false;
@@ -423,33 +500,34 @@ namespace PhotometricStereo
 		for (int i = 0; i < nLigthCount; i++)
 		{
 			if (is16bit)
-				testMatList.push_back(cv::imread(inFolderPath + filePathList.at(i), cv::IMREAD_ANYDEPTH));
+				testMatList.push_back(cv::imread(inFolderPath + fileNameList.at(i), cv::IMREAD_ANYDEPTH));
 			else
-				testMatList.push_back(cv::imread(inFolderPath + filePathList.at(i), cv::IMREAD_GRAYSCALE));
+				testMatList.push_back(cv::imread(inFolderPath + fileNameList.at(i), cv::IMREAD_GRAYSCALE));
 		}
 
 		cv::Mat referenceMat;
 		if (is16bit)
-			referenceMat = cv::imread(inFolderPath + referenceFilePath, cv::IMREAD_ANYDEPTH);
+			referenceMat = cv::imread(inFolderPath + referenceFileName, cv::IMREAD_ANYDEPTH);
 		else
-			referenceMat = cv::imread(inFolderPath + referenceFilePath, cv::IMREAD_GRAYSCALE);
+			referenceMat = cv::imread(inFolderPath + referenceFileName, cv::IMREAD_GRAYSCALE);
 
 		int c_min, r_min, newPicCol, newPicRow;
 		regionExtractor(r_min, c_min, newPicRow, newPicCol, normalMat);
 		normalMat = normalMat(cv::Rect(c_min, r_min, newPicCol, newPicRow));
 		maskMat = maskMat(cv::Rect(c_min, r_min, newPicCol, newPicRow));
-
 		for (int i = 0; i < nLigthCount; i++)
 		{
 			testMatList.at(i) = testMatList.at(i)(cv::Rect(c_min, r_min, newPicCol, newPicRow));
-			cv::imwrite(outFilePath + "/" + filePathList.at(i), testMatList.at(i));
+			cv::imwrite(outFolderPath + fileNameList.at(i), testMatList.at(i));
 		}
 
 		referenceMat = referenceMat(cv::Rect(c_min, r_min, newPicCol, newPicRow));
-		cv::imwrite(outFilePath + "/" + referenceFilePath, referenceMat);
+		cv::imwrite(outFolderPath + referenceFileName, referenceMat);
 
 		cv::Mat alpha_image = alphaImageMaker(normalMat, 0);
-		cv::imwrite(outFilePath + "/GroundTruth_normal.png", alpha_image);
+		cv::imwrite(outFolderPath + "GroundTruth_normal.png", alpha_image);
+		cv::imwrite(outFolderPath + "mask.png", maskMat);
+		maskMat = cv::imread(outFolderPath + "mask.png", cv::IMREAD_GRAYSCALE);
 
 		//realimage から輝度値を取り出す
 		for (int i = m_windowSize / 2; i < newPicRow - m_windowSize / 2; i++)
@@ -476,8 +554,6 @@ namespace PhotometricStereo
 							else
 								referenceIntensity = referenceMat.data[(i + k) * referenceMat.cols + (j + l)] / referenceLightInt;
 						}
-
-
 						for (int m = 0; m < nLigthCount; m++)
 						{
 							//値が不定値にならないための処理、データがない部分は計算を行わない
@@ -493,13 +569,11 @@ namespace PhotometricStereo
 									f->push_back(float(testMatList.at(m).data[(i + k) * testMatList.at(m).cols + (j + l)]) / lightIntList.at(m));
 							}
 						}
-
 						//f2の入力 f(m)/f(m-1) を入力する
 						for (int m = 0; m < nLigthCount; m++)
 						{
 							f2->push_back(f->at((m + 1) % nLigthCount) / referenceIntensity);
 						}
-
 					}
 				}
 				featureList.push_back(f);
@@ -511,170 +585,148 @@ namespace PhotometricStereo
 
 	bool CLearningBasedPhotometricStereo::train()
 	{
-		if (m_idxList.size() != 0)
-		{
-			std::cout << "train:既にtrainされたものが存在します。\n";
-			return false;
-		}
-		int nSigmaCounts = m_featureListList.size();
-		for (int i = 0; i < nSigmaCounts; i++)
-		{
-			cv::Mat tempMat = featureList2Mat(*m_featureListList.at(i));
-			m_featureListMatList.push_back(tempMat);
-		}
-
+		m_featureListMat = featureList2Mat(m_ratioFeatureList);
+		releaseFeatureList(m_featureList);
+		releaseFeatureList(m_ratioFeatureList);
 		std::cout << "kd-tree making start.\n";
-		for (int i = 0; i < nSigmaCounts; i++)
-		{
-			boost::progress_timer timer;
-			cv::flann::Index tempFlannIndex;
-			m_idxList.push_back(tempFlannIndex);
-			m_idxList.at(i).build(m_featureListMatList.at(i), cv::flann::KDTreeIndexParams(16), cvflann::FLANN_DIST_L1);
-			m_idxList2[i].build(m_featureListMatList.at(i), cv::flann::KDTreeIndexParams(16), cvflann::FLANN_DIST_L1);
-			std::cout << std::to_string(i+1) << "/" << std::to_string(nSigmaCounts) << "個目のtraining完了. train time:";
-		}
+
+		boost::progress_timer timer;
+		//m_idx.build(m_featureListMat, cv::flann::KDTreeIndexParams(16), cvflann::FLANN_DIST_L1);
+		m_idx.build(m_featureListMat, cv::flann::LinearIndexParams(), cvflann::FLANN_DIST_L1);
+		std::cout << "kd-tree making finished. train time:";
+		
 		return true;
 	}
 
 	bool CLearningBasedPhotometricStereo::test(cv::Mat queryMat, std::string outFolderPath, int testPicRow, int testPicCol)
 	{
-		int nTrainSigmaCounts = m_idxList.size();
-		if (nTrainSigmaCounts == 0)
-		{
-			std::cout << "test:trainがされていません。\n";
-			return false;
-		}
-		for (int i = 0; i < nTrainSigmaCounts; i++) 
-		{
-			int overDistCounts = 0;
-			int acceptedDistCounts = 0;
+		int overDistCounts = 0;
+		int acceptedDistCounts = 0;
 
-			//データの出力先のパスを入れる。
-			std::ofstream knnwriter(outFolderPath + "knn" + std::to_string(m_knnCounts) + ".csv");
+		//データの出力先のパスを入れる。
+		std::ofstream knnwriter(outFolderPath + "knn" + std::to_string(m_knnCounts) + ".csv");
 
-			cv::Mat_<int> indices; // dataの何行目か
-			cv::Mat_<float> dists; // それぞれどれだけの距離だったか
+		cv::Mat_<int> indices; // dataの何行目か
+		cv::Mat_<float> dists; // それぞれどれだけの距離だったか
 
-			double dSumDist = 0;  //NNのEuclid距離の和
+		double dSumDist = 0;  //NNのEuclid距離の和
 
-			std::cout << "KnnSearch start." << std::endl;
-			boost::timer timer;
+		std::cout << "KnnSearch start." << std::endl;
+		boost::timer timer;
 
-			//同じfeatureなどを出力した場合に備えて2倍の量のsearchをしておく
-			//m_idxList.at(i).knnSearch(queryMat, indices, dists, 2 * m_knnCounts);
-			m_idxList2[i].knnSearch(queryMat, indices, dists, m_knnCounts + 10);
+		//同じfeatureなどを出力した場合に備えて2倍の量のsearchをしておく
+		m_idx.knnSearch(queryMat, indices, dists, m_knnCounts + 10);
 
-			std::cout << "KnnSearch have finished." << std::endl;
-			std::cout << "CalcTime:" << timer.elapsed() << "[s]\n";
+		std::cout << "KnnSearch have finished.";
+		std::cout << "CalcTime:" << timer.elapsed() << "[s]\n";
 
-			std::cout << "query:" << queryMat.cols << std::endl;
-			cv::Mat query_max;
-			cv::reduce(queryMat, query_max, 1, CV_REDUCE_MAX);
+		std::cout << "query:" << queryMat.cols << std::endl;
+		cv::Mat query_max;
+		cv::reduce(queryMat, query_max, 1, CV_REDUCE_MAX);
 
-			std::cout << "Results of knnSearch writing start." << std::endl;
-			timer.restart();
+		std::cout << "Results of knnSearch writing start." << std::endl;
+		timer.restart();
 
-			for (int j = 0; j < indices.rows; j++) {
+		for (int j = 0; j < indices.rows; j++) {
 
-				if (dists(j, 0) < m_knnDistMax)
+			if (dists(j, 0) < m_knnDistMax)
+			{
+				dSumDist += dists(j, 0);
+				acceptedDistCounts++;
+			}
+			else
+			{
+				overDistCounts++;
+				//std::cout << "over distance\n";
+			}
+
+			knnwriter << "Query Point";
+			for (int k = 0; k < queryMat.cols; k++)
+			{
+				//std::cout << k << std::endl;
+				knnwriter << "," << queryMat.at<float>(j, k);
+			}
+			knnwriter << std::endl;
+
+			//query.colsの合計が0ならば（最大が0）探索せず0を入れる
+			if (query_max.at<float>(j, 0) == 0)
+			{
+				for (int k = 0; k < m_knnCounts; k++)
 				{
-					dSumDist += dists(j, 0);
-					acceptedDistCounts++;
+					knnwriter << k << ",0,0,0,0" << std::endl;
 				}
-				else
-				{
-					overDistCounts++;
-					//std::cout << "over distance\n";
-				}
+			}
+			else
+			{
+				double tempNormalX = NULL; //同じデータが2度続かないようにする
+				double tempNormalY = NULL;
+				int addition = 0; //同じデータが続いた回数
+				int k = 0;
 
-				knnwriter << "Query Point";
-				for (int k = 0; k < queryMat.cols; k++)
+				while (k < m_knnCounts)
 				{
-					//std::cout << k << std::endl;
-					knnwriter << "," << queryMat.at<float>(j, k);
-				}
-				knnwriter << std::endl;
-
-				//query.colsの合計が0ならば（最大が0）探索せず0を入れる
-				if (query_max.at<float>(j, 0) == 0)
-				{
-					for (int k = 0; k < m_knnCounts; k++)
+					if (tempNormalX != m_responseList.at(indices(j, k + addition))->at(0) && tempNormalY != m_responseList.at(indices(j, k + addition))->at(1))
 					{
-						knnwriter << k << ",0,0,0,0" << std::endl;
-					}
-				}
-				else
-				{
-					double tempNormalX = NULL; //同じデータが2度続かないようにする
-					double tempNormalY = NULL;
-					int addition = 0; //同じデータが続いた回数
-					int k = 0;
-
-					while (k < m_knnCounts)
-					{
-						if (tempNormalX != m_responseList.at(indices(j, k + addition))->at(0) && tempNormalY != m_responseList.at(indices(j, k + addition))->at(1))
+						//////////////////////////////
+						//////エラーに対する処理//////
+						//////////////////////////////
+						if (dists(j, k + addition) == std::numeric_limits<VAL_TYPE>::denorm_min())
 						{
-							//////////////////////////////
-							//////エラーに対する処理//////
-							//////////////////////////////
-							if (dists(j, k + addition) == std::numeric_limits<VAL_TYPE>::denorm_min())
+							std::cout << "Error:(i, j, k, addition) = (" << j << ", " << k << ", " << addition << ")\n";
+							addition++;
+							std::cout << "NEXT_DIST:" << dists(j, k + addition) << ", See." << std::endl;
+							while (k < m_knnCounts)
 							{
-								std::cout << "Error:(i, j, k, addition) = (" << i << ", " << j << ", " << k << ", " << addition << ")\n";
-								addition++;
-								std::cout << "NEXT_DIST:" << dists(j, k + addition) << ", See." << std::endl;
-								while (k < m_knnCounts)
-								{
-									knnwriter << k << ",0,0,0," << m_knnDistMax << std::endl;
-									k++;
-								}
-							}
-							else
-							{
-								tempNormalX = m_responseList.at(indices(j, k + addition))->at(0);
-								tempNormalY = m_responseList.at(indices(j, k + addition))->at(1);
-								knnwriter << k << "," << m_responseList.at(indices(j, k + addition))->at(0) << "," << m_responseList.at(indices(j, k + addition))->at(1) << "," << m_responseList.at(indices(j, k + addition))->at(2) << "," << dists(j, k + addition) << std::endl;
+								knnwriter << k << ",0,0,0," << m_knnDistMax << std::endl;
 								k++;
 							}
 						}
 						else
 						{
-							addition++;
+							tempNormalX = m_responseList.at(indices(j, k + addition))->at(0);
+							tempNormalY = m_responseList.at(indices(j, k + addition))->at(1);
+							knnwriter << k << "," << m_responseList.at(indices(j, k + addition))->at(0) << "," << m_responseList.at(indices(j, k + addition))->at(1) << "," << m_responseList.at(indices(j, k + addition))->at(2) << "," << dists(j, k + addition) << std::endl;
+							k++;
 						}
+					}
+					else
+					{
+						addition++;
 					}
 				}
 			}
-
-			double dAvgDist = dSumDist / acceptedDistCounts;
-
-			knnwriter.close();
-			std::cout << "knn result writing is finished." << "  CalcTime:" << timer.elapsed() << "[s]\n" << std::endl;
-
-			std::string inputknn = outFolderPath + "knn" + std::to_string(m_knnCounts) + ".csv";
-			std::string output = outFolderPath + "NearestNeighbor";
-
-			std::cout << "Image, Roughness : " << i << ",   Png making start!" << std::endl;
-
-			timer.restart();
-			normalMapMaker(inputknn, output, testPicRow, testPicCol);
-
-			std::cout << "Image, Roughness : " << i << ",    Png making finished!" << "  CalcTime:" << timer.elapsed() << "[s]\n" << std::endl;
-
-			std::string sGroundTruthPath = outFolderPath + "GroundTruth_normal.png";
-			std::string sEstimatePath = outFolderPath + "NearestNeighbor_normal.png";
-
-			cv::Mat matEstimateNormalMap = cv::imread(sEstimatePath);
-			double dSmoothness = calculateSmoothness(matEstimateNormalMap);
-			double dEvaluation = evaluate(sGroundTruthPath, sEstimatePath, m_windowSize);
-			std::cout << "精度 : (DataNumber , AvgError(rad) , Smoothness , EuclidDistance) : ( " << i << " , " << dEvaluation << " , " << dSmoothness << "," << dAvgDist << " )" << std::endl;
-			std::cout << "over distance:" << std::to_string(overDistCounts) << "\n";
-
-			std::ofstream evaluationWriter(outFolderPath + "AvgError.csv", std::ios_base::app);
-			if (i == 0)
-				evaluationWriter << "Roughness,AvgError(rad),AvgError(deg),Smoothness,EuclidDistance" << std::endl;
-			evaluationWriter << "ALL," << dEvaluation << "," << dEvaluation * 180 / M_PI << "," << dSmoothness << "," << dAvgDist << std::endl;
-
-
 		}
+
+		double dAvgDist = dSumDist / acceptedDistCounts;
+
+		knnwriter.close();
+		std::cout << "knn result writing is finished." << "  CalcTime:" << timer.elapsed() << "[s]\n" << std::endl;
+
+		std::string inputknn = outFolderPath + "knn" + std::to_string(m_knnCounts) + ".csv";
+		std::string output = outFolderPath + "NearestNeighbor";
+
+		std::cout << "Image, Roughness : Png making start!" << std::endl;
+
+		timer.restart();
+		normalMapMaker(inputknn, output, testPicRow, testPicCol);
+
+		std::cout << "Image, Roughness : Png making finished!" << "  CalcTime:" << timer.elapsed() << "[s]\n" << std::endl;
+
+		std::string sGroundTruthPath = outFolderPath + "GroundTruth_normal.png";
+		std::string sEstimatePath = outFolderPath + "NearestNeighbor_normal.png";
+
+		cv::Mat matEstimateNormalMap = cv::imread(sEstimatePath);
+		double dSmoothness = calculateSmoothness(matEstimateNormalMap);
+		double dEvaluation = evaluate(sGroundTruthPath, sEstimatePath, m_windowSize);
+		std::cout << "精度 : (DataNumber , AvgError(rad) , Smoothness , EuclidDistance) : ( " << dEvaluation << " , " << dSmoothness << "," << dAvgDist << " )" << std::endl;
+		std::cout << "over distance:" << std::to_string(overDistCounts) << "\n";
+
+		std::ofstream evaluationWriter(outFolderPath + "AvgError.csv", std::ios_base::app);
+		//if (i == 0)
+			evaluationWriter << "Roughness,AvgError(rad),AvgError(deg),Smoothness,EuclidDistance" << std::endl;
+		evaluationWriter << "ALL," << dEvaluation << "," << dEvaluation * 180 / M_PI << "," << dSmoothness << "," << dAvgDist << std::endl;
+
+
 		return true;
 	}
 

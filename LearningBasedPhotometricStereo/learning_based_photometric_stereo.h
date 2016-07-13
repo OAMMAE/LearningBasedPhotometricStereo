@@ -10,9 +10,11 @@ namespace PhotometricStereo
 	public:
 		CLearningBasedPhotometricStereo(
 			const int windowSize = 1,
-			const int knnCounts = 30,
-			const float knnDistMax = 1000) :
+			const int listReserveSize = 1000000,
+			const int knnCounts = 1,
+			const float knnDistMax = 1000.0) :
 			m_windowSize(windowSize),
+			m_listReserveSize(listReserveSize),
 			m_knnCounts(knnCounts),
 			m_knnDistMax(knnDistMax)
 		{
@@ -22,51 +24,55 @@ namespace PhotometricStereo
 			/////////////////////////////////////////////////////////////
 			//////////É|ÉCÉìÉ^Ç≈ï€éùÇµÇƒÇ¢ÇÈÇ‡ÇÃÇÃÉÅÉÇÉäÇÃâï˙///////////
 			/////////////////////////////////////////////////////////////
-			releaseResponseList(m_responseList);
-
-			if (!m_featureListList.empty())
-			{
-				const int nFeatureLists = m_featureListList.size();
-				for (int i = 0; i < nFeatureLists; ++i)
-				{
-					releaseFeatureList(*m_featureListList.at(i));
-					delete m_featureListList.at(i);
-				}
-				m_featureListList.clear();
-				m_featureListList.shrink_to_fit();
-			}
+			if(!m_responseList.empty())
+				releaseResponseList(m_responseList);
+			if (!m_featureList.empty())
+				releaseFeatureList(m_featureList);
+			if (!m_ratioFeatureList.empty())
+				releaseFeatureList(m_ratioFeatureList);
 		}
+
+		void init(std::vector<cv::Vec3d> lightVecList, cv::Vec3d referenceVec, cv::Vec3d observedVec);
 
 	private:
 		int m_windowSize;
+		int m_listReserveSize;
 		int m_knnCounts;
 		float m_knnDistMax;
+
+		FeatureList m_featureList;
+		FeatureList m_ratioFeatureList;
+		ResponseList m_responseList;
+		cv::Mat m_featureListMat;
+		cv::flann::Index m_idx;
+
+		std::vector<cv::Vec3d> m_lightVecList;
+		cv::Vec3d m_referenceVec;
 		cv::Vec3d m_observedVec;
 
 	public:
-		std::vector<FeatureList*> m_featureListList;
-		std::vector<cv::Mat> m_featureListMatList;
-		std::vector<cv::flann::Index> m_idxList;
-		ResponseList m_responseList;
+		// Get/Set Property
+		std::vector<cv::Vec3d> getLightVecList();
+		void setLightVecList(std::vector<cv::Vec3d> lightVecList);
+		cv::Vec3d getReferenceVec();
+		void setReferenceVec(cv::Vec3d referenceVec);
+		cv::Vec3d getObservedVec();
+		void setObservedVec(cv::Vec3d observedVec);
 
-		cv::flann::Index m_idxList2[2];
-
-		std::vector<cv::Vec3d> m_lightVecList;
-		std::vector<double> m_lightIntList;
-		cv::Vec3d m_referenceVec;
-		double m_referenceInt;
-
-		void setObservedVes(cv::Vec3d observedVec);
+		void releaseFeatureList(FeatureList &featureList);
+		void releaseResponseList(ResponseList &responseList);
 		cv::Mat featureList2Mat(FeatureList &featureList);
-		bool readSyntheticImage4Train(FeatureList &featureList, FeatureList &ratioFeatureList, ResponseList &responseList, std::string filePath, double sigma);
-		bool readSyntheticImage4Test(FeatureList &featureList, FeatureList &ratioFeatureList, std::string inFilePath, std::string outFolderPath, double sigma, bool albedoHandler = false, std::string textureFilePath = "");
-		bool readRealImage4Test(FeatureList &featureList, FeatureList &ratioFeatureList, std::string inFolderPath, std::vector<std::string> filePathList, std::string referenceFilePath, std::string outFilePath, int nLigthCount, std::vector<double> lightIntList, double referenceLightInt, bool is16bit = false);
+
+		bool syntheticImageLoader4Train(std::string filePath, double sigma);
+		bool syntheticImageLoader4Test(FeatureList & featureList, FeatureList & ratioFeatureList, std::string inFilePath, std::string outFolderPath, double sigma, bool albedoHandler = false, std::string textureFilePath = "");
+		bool realImageLoader4Test(FeatureList & featureList, FeatureList & ratioFeatureList, std::string inFolderPath, std::vector<std::string> fileNameList, std::string referenceFileName, std::string outFolderPath, std::vector<double> lightIntList, double referenceLightInt, bool is16bit = false);
 	
 		bool train();
 		bool test(cv::Mat queryMat, std::string outFolderPath, int testPicRow, int testPicCol);
 
 	private:
 		cv::Mat matNormalizing(cv::Mat inputMat);
+	public:
 		bool normalMapMaker(std::string knnFilePath, std::string outFolderPath, int picRow, int picCol);
 	};
 }

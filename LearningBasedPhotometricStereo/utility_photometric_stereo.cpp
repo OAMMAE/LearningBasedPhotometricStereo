@@ -130,39 +130,134 @@ namespace PhotometricStereo
 	}
 
 	/*
-	* featureListの中身のポインターを全て解放し、featureListのcapacityも0にする
+	* picNameListに読み込む画像のfilenameを格納 filenameは"000.png"という7桁
 	*/
-	void releaseFeatureList(FeatureList & featureList)
+	bool picListLoader(std::vector<std::string>& picNameList, std::string inFilePath)
 	{
-		//responselistの解放
-		if (!featureList.empty())
+		std::ifstream readingFile;
+		readingFile.open(inFilePath, std::ios::in);
+
+		if (readingFile.fail())
 		{
-			const int nFeatures = featureList.size();
-			for (int i = 0; i < nFeatures; ++i)
-			{
-				delete featureList.at(i);
-			}
+			std::cout << "picListLoader:filelist.txtの読み込みに失敗\n";
+			return false;
 		}
-		featureList.clear();
-		featureList.shrink_to_fit();
+
+		std::string readLineBuffer;
+
+		while (!readingFile.eof())
+		{
+			std::getline(readingFile, readLineBuffer);
+			if (readLineBuffer.size() == 7)
+				picNameList.push_back(readLineBuffer);
+		}
+		readingFile.close();
+		return true;
 	}
 
 	/*
-	* responseListの中身のポインターを全て解放し、responseListのcapacityも0にする
+	* lightVecListに光源ベクトルを格納
 	*/
-	void releaseResponseList(ResponseList & responseList)
+	bool lightVecListLoader(std::vector<cv::Vec3d>& lightVecList, std::string inFilePath, std::vector<int> readDataIndexList)
 	{
-		//responselistの解放
-		if (!responseList.empty())
+		std::ifstream readingFile;
+		readingFile.open(inFilePath, std::ios::in);
+
+		if (readingFile.fail())
 		{
-			const int nResponses = responseList.size();
-			for (int i = 0; i < nResponses; ++i)
-			{
-				delete responseList.at(i);
-			}
+			std::cout << "lightVecListLoader:light_directions.txtの読み込みに失敗\n";
+			return false;
 		}
-		responseList.clear();
-		responseList.shrink_to_fit();
+
+		int lineCount = 1;
+		int readDataIndex = 0;
+		std::string readLineBuffer;
+
+		while (!readingFile.eof())
+		{
+			std::getline(readingFile, readLineBuffer);
+			if (readDataIndexList.at(readDataIndex) == lineCount)
+			{
+				const char delimiter = ' ';
+				std::string separatedStringBuffer;
+				std::istringstream lineSeparater(readLineBuffer);
+				double tempX, tempY, tempZ;
+				int i = 0;
+				while (getline(lineSeparater, separatedStringBuffer, delimiter))
+				{
+					if (i == 0)
+						tempX = std::stod(separatedStringBuffer);
+					else if (i == 1)
+						tempY = std::stod(separatedStringBuffer);
+					else
+						tempZ = std::stod(separatedStringBuffer);
+					i++;
+				}
+				cv::Vec3d tempL(tempZ, tempY, tempX);
+				tempL = tempL / cv::norm(tempL);
+				lightVecList.push_back(tempL);
+
+				readDataIndex++;
+				if (readDataIndex == readDataIndexList.size())
+					break;
+			}
+			lineCount++;
+		}
+
+		readingFile.close();
+		return true;
+	}
+
+	/*
+	* lightIntListに光源の強度を格納
+	*/
+	bool lightIntListLoader(std::vector<double>& lightIntList, std::string inFilePath, std::vector<int> readDataIndexList)
+	{
+		std::ifstream readingFile;
+		readingFile.open(inFilePath, std::ios::in);
+
+		if (readingFile.fail())
+		{
+			std::cout << "lightVecListLoader:light_directions.txtの読み込みに失敗\n";
+			return false;
+		}
+
+		int lineCount = 1;
+		int readDataIndex = 0;
+		std::string readLineBuffer;
+
+		while (!readingFile.eof())
+		{
+			std::getline(readingFile, readLineBuffer);
+			if (readDataIndexList.at(readDataIndex) == lineCount)
+			{
+				const char delimiter = ' ';
+				std::string separatedStringBuffer;
+				std::istringstream lineSeparater(readLineBuffer);
+				double tempR, tempG, tempB;
+				int i = 0;
+				while (getline(lineSeparater, separatedStringBuffer, delimiter))
+				{
+					if (i == 0)
+						tempR = std::stod(separatedStringBuffer);
+					else if (i == 1)
+						tempG = std::stod(separatedStringBuffer);
+					else
+						tempB = std::stod(separatedStringBuffer);
+					i++;
+				}
+				double tempIntensity = rgb2gray(tempR, tempG, tempB);
+				lightIntList.push_back(tempIntensity);
+
+				readDataIndex++;
+				if (readDataIndex == readDataIndexList.size())
+					break;
+			}
+			lineCount++;
+		}
+
+		readingFile.close();
+		return true;
 	}
 
 
@@ -402,7 +497,7 @@ namespace PhotometricStereo
 	/*
 	* matのプロパティをコンソールに書き出す
 	*/
-	void printMatProperty(cv::Mat mat)
+	void matPropertyPrinter(cv::Mat mat)
 	{
 		// 次元数（画像なので縦・横の2次元）
 		std::cout << "dims: " << mat.dims << std::endl;
