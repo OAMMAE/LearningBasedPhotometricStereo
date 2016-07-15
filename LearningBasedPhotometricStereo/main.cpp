@@ -7,6 +7,8 @@
 #include "utility.h"
 #include "utility_photometric_stereo.h"
 
+#include <omp.h>
+
 namespace PhotometricStereo
 {
 	bool test()
@@ -22,14 +24,14 @@ namespace PhotometricStereo
 		lightnumVec.push_back("10");
 
 		std::vector<std::string> testDataIndexVec;
-		//testDataIndexVec.push_back("22");
+		//testDataIndexVec.push_back("20");
 		//testDataIndexVec.push_back("23");
-		testDataIndexVec.push_back("24");
+		//testDataIndexVec.push_back("24");
 
 		std::vector<std::string> albedoTestList;
-		//albedoTestList.push_back("20");
+		albedoTestList.push_back("20");
 
-		std::vector<double> sigmaList;
+		std::vector<float> sigmaList;
 		//sigmaList.push_back(0.0);
 		sigmaList.push_back(0.1);
 		//sigmaList.push_back(0.2);
@@ -60,13 +62,12 @@ namespace PhotometricStereo
 			lightVecListLoader(lightVecList, optionDir + "light_directions.txt", readDataIndexList);
 			referenceVec = lightVecList.at(0);
 
-			learningBasedPS.init(lightVecList, referenceVec, observedVec);
+			learningBasedPS.init(lightVecList, referenceVec, observedVec, sigmaList);
 
-			for (int i = 0; i < sigmaList.size(); i++)
-			{
-				boost::progress_timer timer;
-				learningBasedPS.syntheticImageLoader4Train(inFilePath, sigmaList.at(i));
-			}
+			boost::timer timer;
+			learningBasedPS.syntheticImageLoader4Train(inFilePath);
+			std::cout << "CalcTime:" << timer.elapsed() << "[s]\n";
+
 			learningBasedPS.train();
 
 			for (int roughnessCount = 0; roughnessCount < roughnessVec.size(); roughnessCount++)
@@ -114,7 +115,6 @@ namespace PhotometricStereo
 					FeatureList testfeatureList;
 					FeatureList testfeatureList2;
 					//ResponseList testresponseList;
-					int mPicRow, mPicCol;
 
 					//file という名前のフォルダを作成する
 					std::string tempFilePath = "";
@@ -130,92 +130,64 @@ namespace PhotometricStereo
 					{
 						testfilePath = testDir + "snapshot" + albedoTestList.at(i - testDataIndexVec.size()) + ".png";
 						tempFilePath = file + "/albedoTest/" + albedoTestList.at(i - testDataIndexVec.size());
-
 					}
 
 					UtilityMethod::mkdir(tempFilePath);
 					tempFilePath = tempFilePath + "/";
-					//if (i < 10)
-					//	testfilePath = testDir + "snapshot0" + std::to_string(i) + ".png";
-					//else if(i < std::stoi(testdata_quantity))
-					//	testfilePath = testDir + "snapshot" + std::to_string(i) + ".png";
-					//else
-					//	testfilePath = testDir + "snapshot" + albedoTestList.at(i - std::stoi(testdata_quantity)) + ".png";
 
-					cv::Mat tetete = cv::imread(testfilePath);
+					cv::Mat tempMat = cv::imread(testfilePath);
 					int c_min, r_min;
-					regionExtractor(r_min, c_min, mPicRow, mPicCol, tetete);
-
+					int mPicRow, mPicCol;
+					regionExtractor(r_min, c_min, mPicRow, mPicCol, tempMat);
+					tempMat.release();
 
 					if (i < testDataIndexVec.size())
 						learningBasedPS.syntheticImageLoader4Test(testfeatureList, testfeatureList2, testfilePath, tempFilePath, std::stod(roughnessVec.at(roughnessCount)));
 					else
-					{
-					}
-					//releaseFeatureList(testfeatureList);
+						learningBasedPS.syntheticImageLoader4Test(testfeatureList, testfeatureList2, testfilePath, tempFilePath, std::stod(roughnessVec.at(roughnessCount)), testDir + "Textured" + albedoTestList.at(i - testDataIndexVec.size()) + ".png");
+
 					cv::Mat queryMat = learningBasedPS.featureList2Mat(testfeatureList2);
 
 					learningBasedPS.releaseFeatureList(testfeatureList);
 					learningBasedPS.releaseFeatureList(testfeatureList2);
 
-					cv::Mat tempQueryMat = queryMat(cv::Rect(0, 10050, 10, 500));
-					//queryMat = queryMat(cv::Rect(0, 10050, 10, 50));
-
-					//for (int tetete = 0; tetete < 10; tetete++)
-					//{
-					//	//std::cout << m_featureList.at(tetete)->at(0) << "," << m_featureListMat.at<float>(tetete, 0) << std::endl;
-					//	std::cout << testfeatureList.at(10100)->at(tetete) << "," << queryMat.at<float>(10100, tetete) << std::endl;
-					//}
-
-					//for (int tetete = 0; tetete < 100; tetete++)
-					//{
-					//	std::cout << testfeatureList.at(10000 + tetete)->at(0) << std::endl;
-					//}
-
 					learningBasedPS.test(queryMat, tempFilePath, mPicRow, mPicCol);
 				}
 			}
-			std::cout << "kokoko\n";
 		}
-		
 		return true;
 	}
 
 	bool testReal()
 	{
-		CLearningBasedPhotometricStereo learningBasedPS;
 		std::string inFilePath = "D:/Data/PhotometricStereo/TrainDataBall/snapshot00.png";
-		std::string dataName = "catPNG";
-		std::string testDir = "D:/Data/PhotometricStereo/TestDataReal/" + dataName + "/";
-		//std::string optionDir = "D:/Data/PhotometricStereo/TestData/Option/";
+		//std::string dataName = "catPNG";
+		//std::string testDir = "D:/Data/PhotometricStereo/TestDataReal/" + dataName + "/";
+		//bool is16bit = true;
 
-		std::vector<std::string> roughnessVec;
-		roughnessVec.push_back("0.1");
+		std::string dataName = "cat";
+		std::string testDir = "D:/Data/PhotometricStereo/PSData/" + dataName + "/";
+		bool is16bit = false;
+
+
 		std::vector<std::string> lightnumVec;
 		lightnumVec.push_back("10");
 
-		std::vector<std::string> testDataIndexVec;
-		//testDataIndexVec.push_back("22");
-		//testDataIndexVec.push_back("23");
-		testDataIndexVec.push_back("24");
-
-		std::vector<std::string> albedoTestList;
-		//albedoTestList.push_back("20");
-
-		std::vector<double> sigmaList;
-		//sigmaList.push_back(0.0);
+		std::vector<float> sigmaList;
+		sigmaList.push_back(0.0);
 		sigmaList.push_back(0.1);
-		//sigmaList.push_back(0.2);
-		//sigmaList.push_back(0.3);
+		sigmaList.push_back(0.2);
+		sigmaList.push_back(0.3);
 		//sigmaList.push_back(0.4);
 
 		int windowSize = 1;
-		std::vector<cv::Vec3d> lightVecList;
-		cv::Vec3d referenceVec;
 		cv::Vec3d observedVec(1, 0, 0);
 
 		for (int lightCount = 0; lightCount < lightnumVec.size(); lightCount++)
 		{
+			std::string referencePicName;
+			std::vector<cv::Vec3d> lightVecList;
+			cv::Vec3d referenceVec;
 			std::vector<double> lightIntList;
 			double referenceInt;
 			//読み込む画像をstringで保持
@@ -231,129 +203,69 @@ namespace PhotometricStereo
 				readDataIndexList.push_back(std::stoi(temp));
 			}
 			lightVecListLoader(lightVecList, testDir + "/light_directions.txt", readDataIndexList);
-			referenceVec = lightVecList.at(0);
 			lightIntListLoader(lightIntList, testDir + "/light_intensities.txt", readDataIndexList);
-			referenceInt = lightIntList.at(0);
-			std::string referencePicName = readPngList.at(0);
 
-			learningBasedPS.init(lightVecList, referenceVec, observedVec);
-
-			for (int i = 0; i < sigmaList.size(); i++)
+			for (int i = 0; i < lightVecList.size(); i++)
 			{
-				boost::progress_timer timer;
-				learningBasedPS.syntheticImageLoader4Train(inFilePath, sigmaList.at(i));
-			}
-			learningBasedPS.train();
+				referenceVec = lightVecList.at(i);
+				referenceInt = lightIntList.at(i);
+				referencePicName = readPngList.at(i);
 
-			for (int roughnessCount = 0; roughnessCount < roughnessVec.size(); roughnessCount++)
-			{
+				CLearningBasedPhotometricStereo learningBasedPS;
+				learningBasedPS.init(lightVecList, referenceVec, observedVec, sigmaList);
 
-				std::string sYN;
-				std::string sSigma;
-				double dSigma;
+				std::cout << "training start.\n";
+				boost::timer timer;
+				learningBasedPS.syntheticImageLoader4Train(inFilePath);
+				std::cout << "training have finished. CalcTime:" << timer.elapsed() << "[s]\n";
 
-				std::string sDebug; //debug用にcinでとめるための入力
+				learningBasedPS.train();
 
-				std::string sDirName; //ディレクトリ名
+				//outFolderPath という名前のフォルダを作成する
+				std::string outFolderPath = testDir + "/PM" + std::to_string(windowSize) + "_" + std::to_string(lightVecList.size());
+				UtilityMethod::mkdir(outFolderPath);
 
-				std::cout << "please input GroundTruth sigma\n";
-				sSigma = roughnessVec.at(roughnessCount);
-				sDirName = "OrenNayar" + sSigma;
-				dSigma = std::stod(sSigma);
-
-
-				std::cout << "Testing data loading..." << std::endl;
-
-				//////////////////////////////////////////
-				//////////////testDirの名前///////////////
-				//////////////////////////////////////////
-
-				//file という名前のフォルダを作成する
-				std::string file = testDir + sDirName;
-				UtilityMethod::mkdir(file);
-
-				//file という名前のフォルダを作成する
-				file = file + "/PM" + std::to_string(windowSize) + "_" + std::to_string(lightVecList.size());
-				UtilityMethod::mkdir(file);
-
-
-				//file という名前のフォルダを作成する
-				file = file + "/1";
-				UtilityMethod::mkdir(file);
-
-				file = file + "/";
-
-				// Testing data loading
+				//outFolderPath という名前のフォルダを作成する
+				outFolderPath = outFolderPath + "/1_" + std::to_string(i);
+				UtilityMethod::mkdir(outFolderPath);
+				outFolderPath = outFolderPath + "/";
 
 				FeatureList testfeatureList;
 				FeatureList testfeatureList2;
-				//ResponseList testresponseList;
+
+				learningBasedPS.realImageLoader4Test(testfeatureList, testfeatureList2, testDir, readPngList, referencePicName, outFolderPath, lightIntList, referenceInt, is16bit);
+
+				cv::Mat gtMat = cv::imread(outFolderPath + "GroundTruth_normal.png");
 				int mPicRow, mPicCol;
-
-				std::string testfilePath = testDir;
-				
-				learningBasedPS.realImageLoader4Test(testfeatureList, testfeatureList2, testfilePath, readPngList, referencePicName, file, lightIntList, referenceInt, true);
-
-				cv::Mat tetete = cv::imread(file + "GroundTruth_normal.png");
 				int c_min, r_min;
-				regionExtractor(r_min, c_min, mPicRow, mPicCol, tetete);
-
+				regionExtractor(r_min, c_min, mPicRow, mPicCol, gtMat);
+				gtMat.release();
 				std::cout << mPicCol << "," << mPicRow << std::endl;
+
 				cv::Mat queryMat = learningBasedPS.featureList2Mat(testfeatureList2);
-
-				//for (int tetete = queryMat.rows - 500; tetete < queryMat.rows; tetete++)
-				//{
-				//	std::cout << tetete << ":";
-				//	for (int unko = 0; unko < 10; unko++)
-				//	{
-				//		std::cout << "(" << queryMat.at<float>(tetete, unko) << "," << testfeatureList2.at(tetete)->at(unko) << ")";
-				//	}
-				//	std::cout << std::endl;
-				//}
-				//std::cout << testfeatureList2.size() << std::endl;
-
 				learningBasedPS.releaseFeatureList(testfeatureList);
 				learningBasedPS.releaseFeatureList(testfeatureList2);
 
-				cv::Mat tempQueryMat = queryMat(cv::Rect(0, 0, 10, 10000));
-				//queryMat = queryMat(cv::Rect(0, 10050, 10, 50));
-
-				//for (int tetete = 0; tetete < 10; tetete++)
-				//{
-				//	//std::cout << m_featureList.at(tetete)->at(0) << "," << m_featureListMat.at<float>(tetete, 0) << std::endl;
-				//	std::cout << testfeatureList.at(10100)->at(tetete) << "," << queryMat.at<float>(10100, tetete) << std::endl;
-				//}
-
-				//for (int tetete = 0; tetete < 100; tetete++)
-				//{
-				//	std::cout << testfeatureList.at(10000 + tetete)->at(0) << std::endl;
-				//}
-
-				learningBasedPS.test(queryMat, file, mPicRow, mPicCol);
+				learningBasedPS.test(queryMat, outFolderPath, mPicRow, mPicCol);
 			}
-			std::cout << "kokoko\n";
 		}
-
 		return true;
-
 	}
-
-
 }
+
 
 int main()
 {
-	//double abc = NULL;
-	//double def = 0;
-	//if (abc == def)
-	//	std::cout << "NULL != 0 true\n";
-	//else
-	//	std::cout << "oh\n";
-	//std::string aa;
-	//std::cin >> aa;
-	PhotometricStereo::testReal();
-	std::string sis;
-	std::cin >> sis;
+#ifdef _OPENMP
+	std::cout << "The number of processors is " << omp_get_num_procs() << std::endl;
+	std::cout << "OpenMP : Enabled (Max # of threads = " << omp_get_max_threads() << ")" << std::endl;
+#endif
+
+	PhotometricStereo::test();
+	//PhotometricStereo::testReal();
+	std::cout << "finished.\n";
+	std::string hoge;
+	std::cin >> hoge;
     return 0;
 }
 

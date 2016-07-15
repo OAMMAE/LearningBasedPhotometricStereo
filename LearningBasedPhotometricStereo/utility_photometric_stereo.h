@@ -18,7 +18,6 @@ namespace PhotometricStereo
 	bool lightIntListLoader(std::vector<double> &lightIntList, std::string inFilePath, std::vector<int> readDataIndexList);
 
 
-
 	double evaluate(std::string groundTruth, std::string estimate, const int WSIZE);
 	bool createHeatMap(std::string groundTruth, std::string estimate, std::string outFileName, const int WSIZE, const double MAX_DEG);
 	bool maskImageMaker(std::string inputPic, std::string outputPic, const int THRESHOLD);

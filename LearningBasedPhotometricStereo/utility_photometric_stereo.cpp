@@ -156,7 +156,7 @@ namespace PhotometricStereo
 	}
 
 	/*
-	* lightVecList‚ÉŒõŒ¹ƒxƒNƒgƒ‹‚ğŠi”[
+	* lightVecList‚ÉŒõŒ¹ƒxƒNƒgƒ‹‚ğŠi”[,delimiter ‚Í' '‚©','
 	*/
 	bool lightVecListLoader(std::vector<cv::Vec3d>& lightVecList, std::string inFilePath, std::vector<int> readDataIndexList)
 	{
@@ -178,21 +178,14 @@ namespace PhotometricStereo
 			std::getline(readingFile, readLineBuffer);
 			if (readDataIndexList.at(readDataIndex) == lineCount)
 			{
-				const char delimiter = ' ';
-				std::string separatedStringBuffer;
-				std::istringstream lineSeparater(readLineBuffer);
+				std::vector<std::string> separatedBufferList;
+				boost::split(separatedBufferList, readLineBuffer, boost::is_any_of(L", "));
+
 				double tempX, tempY, tempZ;
-				int i = 0;
-				while (getline(lineSeparater, separatedStringBuffer, delimiter))
-				{
-					if (i == 0)
-						tempX = std::stod(separatedStringBuffer);
-					else if (i == 1)
-						tempY = std::stod(separatedStringBuffer);
-					else
-						tempZ = std::stod(separatedStringBuffer);
-					i++;
-				}
+				tempX = std::stod(separatedBufferList.at(0));
+				tempY = std::stod(separatedBufferList.at(1));
+				tempZ = std::stod(separatedBufferList.at(2));
+
 				cv::Vec3d tempL(tempZ, tempY, tempX);
 				tempL = tempL / cv::norm(tempL);
 				lightVecList.push_back(tempL);
@@ -203,13 +196,12 @@ namespace PhotometricStereo
 			}
 			lineCount++;
 		}
-
 		readingFile.close();
 		return true;
 	}
 
 	/*
-	* lightIntList‚ÉŒõŒ¹‚Ì‹­“x‚ğŠi”[
+	* lightIntList‚ÉŒõŒ¹‚Ì‹­“x‚ğŠi”[,delimiter ‚Í' '
 	*/
 	bool lightIntListLoader(std::vector<double>& lightIntList, std::string inFilePath, std::vector<int> readDataIndexList)
 	{
@@ -259,9 +251,6 @@ namespace PhotometricStereo
 		readingFile.close();
 		return true;
 	}
-
-
-
 
 	/*
 	* groundTruth ‚Æ estimate ‚Ì“ñ‰æ‘œ‚Ìnormal‚Ì·‚ğŒvZ‚µA•Ô‚·B(rad)

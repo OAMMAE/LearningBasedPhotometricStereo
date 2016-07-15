@@ -2,15 +2,17 @@
 
 #include "stdafx.h"
 #include "learning_based_photometric_stereo.h"
+#include "utility.h"
 #include "utility_photometric_stereo.h"
 
 namespace PhotometricStereo
 {
-	void CLearningBasedPhotometricStereo::init(std::vector<cv::Vec3d> lightVecList, cv::Vec3d referenceVec, cv::Vec3d observedVec)
+	void CLearningBasedPhotometricStereo::init(std::vector<cv::Vec3d> lightVecList, cv::Vec3d referenceVec, cv::Vec3d observedVec, std::vector<float> sigmaList)
 	{
 		m_lightVecList = lightVecList;
 		m_referenceVec = referenceVec;
 		m_observedVec = observedVec;
+		m_sigmaList = sigmaList;
 		m_featureList.reserve(m_listReserveSize);
 		m_ratioFeatureList.reserve(m_listReserveSize);
 		m_responseList.reserve(m_listReserveSize);
@@ -21,30 +23,33 @@ namespace PhotometricStereo
 	{
 		return m_lightVecList;
 	}
-
 	void CLearningBasedPhotometricStereo::setLightVecList(std::vector<cv::Vec3d> lightVecList)
 	{
 		m_lightVecList = lightVecList;
 	}
-
 	cv::Vec3d CLearningBasedPhotometricStereo::getReferenceVec()
 	{
 		return m_referenceVec;
 	}
-
 	void CLearningBasedPhotometricStereo::setReferenceVec(cv::Vec3d referenceVec)
 	{
 		m_referenceVec = referenceVec;
 	}
-
 	cv::Vec3d CLearningBasedPhotometricStereo::getObservedVec()
 	{
 		return m_observedVec;
 	}
-
 	void CLearningBasedPhotometricStereo::setObservedVec(cv::Vec3d observedVec)
 	{
 		m_observedVec = observedVec;
+	}
+	std::vector<float> CLearningBasedPhotometricStereo::getSigmaList()
+	{
+		return m_sigmaList;
+	}
+	void CLearningBasedPhotometricStereo::setSigmaList(std::vector<float> sigmaList)
+	{
+		m_sigmaList = sigmaList;
 	}
 #pragma endregion
 
@@ -117,6 +122,53 @@ namespace PhotometricStereo
 		}
 		responseList.clear();
 		responseList.shrink_to_fit();
+	}
+
+	bool CLearningBasedPhotometricStereo::measurementImageMaker(cv::Mat normalizedNormalMat, cv::Mat alphaImagedMat, std::string outFilePath, cv::Vec3d observedVec, cv::Vec3d lightVec, float sigma, cv::Mat textureMat)
+	{
+		if (normalizedNormalMat.data == NULL)
+		{
+			std::cout << "measurementImageMaker:NormalMatが不正\n";
+			return false;
+		}
+		if (alphaImagedMat.data == NULL)
+		{
+			std::cout << "measurementImageMaker:alphaImagedMatが不正\n";
+			return false;
+		}
+
+		bool albedoHandler;
+		double rho = 1.0;
+		if (textureMat.data == NULL)
+			albedoHandler = false;
+		else
+			albedoHandler = true;
+
+		cv::Mat MatOrenNayar = cv::Mat::ones(normalizedNormalMat.size(), CV_8UC1) * 255;
+
+		for (int y = 0; y < MatOrenNayar.rows; y++)
+		{
+			for (int x = 0; x < MatOrenNayar.cols; x++)
+			{
+				if (alphaImagedMat.at<cv::Vec4b>(y, x)[3] != 0)
+				{
+					cv::Vec3d tempNormalVec = normalizedNormalMat.at<cv::Vec3d>(y, x);
+					if (albedoHandler)
+					{
+						cv::Vec3d tempAlbedoVec = textureMat.at<cv::Vec3b>(y, x);
+						rho = rgb2gray(tempAlbedoVec(2), tempAlbedoVec(1), tempAlbedoVec(0)) / 255;
+					}
+					else
+					{
+						rho = 1;
+					}
+
+					MatOrenNayar.data[y * MatOrenNayar.step + x * MatOrenNayar.elemSize()] = (int)(std::max(orenNayarReflectance(tempNormalVec, observedVec, lightVec, sigma, rho), 0.0) * 255);
+				}
+			}
+		}
+		cv::imwrite(outFilePath, MatOrenNayar);
+		return true;
 	}
 
 	cv::Mat CLearningBasedPhotometricStereo::matNormalizing(cv::Mat inputMat)
@@ -243,87 +295,101 @@ namespace PhotometricStereo
 		return true;
 	}
 
-	bool CLearningBasedPhotometricStereo::syntheticImageLoader4Train(std::string filePath, double sigma)
+	bool CLearningBasedPhotometricStereo::syntheticImageLoader4Train(std::string filePath)
 	{
 		cv::Mat inputMat = cv::imread(filePath);
-		int nLigthCount = m_lightVecList.size();
+		int nLigths = m_lightVecList.size();
+		int nSigmas = m_sigmaList.size();
 
 		if (inputMat.data == NULL)
 		{
-			std::cout << "readPic4Train:imread の失敗\n";
+			std::cout << "syntheticImageLoader4Train:imread の失敗\n";
+			return false;
+		}
+		if (nLigths == 0)
+		{
+			std::cout << "syntheticImageLoader4Train:Lightの未設定\n";
+			return false;
+		}
+		if (nSigmas == 0)
+		{
+			std::cout << "syntheticImageLoader4Train:Sigmaの未設定\n";
 			return false;
 		}
 
 		cv::Mat normalizedMat = matNormalizing(inputMat);
 
-		for (int i = m_windowSize / 2; i < normalizedMat.rows - m_windowSize / 2; i++)
+		for (int nSigmaCount = 0; nSigmaCount < nSigmas; nSigmaCount++)
 		{
-			for (int j = m_windowSize / 2; j < normalizedMat.cols - m_windowSize / 2; j++)
+			for (int i = m_windowSize / 2; i < normalizedMat.rows - m_windowSize / 2; i++)
 			{
-				Response *r = new Response();
-				Feature *f = new Feature();
-				Feature *f2 = new Feature();
-
-				if (inputMat.data[i * inputMat.step + j * inputMat.elemSize()] != 0 || inputMat.data[i * inputMat.step + j * inputMat.elemSize() + 1 * inputMat.elemSize1()] != 0 || inputMat.data[i * inputMat.step + j * inputMat.elemSize() + 2 * inputMat.elemSize1()] != 0)
+				for (int j = m_windowSize / 2; j < normalizedMat.cols - m_windowSize / 2; j++)
 				{
-					for (int k = 2; k >= 0; k--)
+					Response *r = new Response();
+					Feature *f = new Feature();
+					Feature *f2 = new Feature();
+
+					if (inputMat.data[i * inputMat.step + j * inputMat.elemSize()] != 0 || inputMat.data[i * inputMat.step + j * inputMat.elemSize() + 1 * inputMat.elemSize1()] != 0 || inputMat.data[i * inputMat.step + j * inputMat.elemSize() + 2 * inputMat.elemSize1()] != 0)
 					{
-						r->push_back(normalizedMat.at<cv::Vec3d>(i, j)[k]);
-					}
-					for (int k = -m_windowSize / 2; k <= m_windowSize / 2; k++)
-					{
-						for (int l = -m_windowSize / 2; l <= m_windowSize / 2; l++)
+						for (int k = 2; k >= 0; k--)
 						{
-							cv::Vec3d tempNormalVec = normalizedMat.at<cv::Vec3d>(i + k, j + l);
-							//各ピクセルについて法線のz方向が負ならばベクトルの向きを反転する
-							if (tempNormalVec(0) < 0)
+							r->push_back(normalizedMat.at<cv::Vec3d>(i, j)[k]);
+						}
+						for (int k = -m_windowSize / 2; k <= m_windowSize / 2; k++)
+						{
+							for (int l = -m_windowSize / 2; l <= m_windowSize / 2; l++)
 							{
-								tempNormalVec = -tempNormalVec;
-							}
-							for (int m = 0; m < nLigthCount; m++)
-							{
-								//値が不定値にならないための処理、データがない部分は計算を行わない(Edge部分)
+								cv::Vec3d tempNormalVec = normalizedMat.at<cv::Vec3d>(i + k, j + l);
+								//各ピクセルについて法線のz方向が負ならばベクトルの向きを反転する
+								if (tempNormalVec(0) < 0)
+								{
+									tempNormalVec = -tempNormalVec;
+								}
+								for (int m = 0; m < nLigths; m++)
+								{
+									//値が不定値にならないための処理、データがない部分は計算を行わない(Edge部分)
+									if (cv::norm(tempNormalVec) == 0)
+									{
+										f->push_back(0.0);
+									}
+									else
+									{
+										//法線と光ベクトルの内積が負ならば値を0にする
+										f->push_back(std::max(orenNayarReflectance(tempNormalVec, m_observedVec, m_lightVecList[m], m_sigmaList.at(nSigmaCount)), 0.0));
+									}
+								}
+
+								double referenceIntensity;
+
+								//値が不定値にならないための処理、データがない部分は計算を行わない
 								if (cv::norm(tempNormalVec) == 0)
 								{
-									f->push_back(0.0);
+									referenceIntensity = 1;
 								}
 								else
 								{
-									//法線と光ベクトルの内積が負ならば値を0にする
-									f->push_back(std::max(orenNayarReflectance(tempNormalVec, m_observedVec, m_lightVecList[m], sigma), 0.0));
+									//referenceIntensityの最小値は1/255とする
+									referenceIntensity = std::max(orenNayarReflectance(tempNormalVec, m_observedVec, m_referenceVec, m_sigmaList.at(nSigmaCount)), (1.0 / 255));
 								}
-							}
 
-							double referenceIntensity;
+								//f2の入力 f(m)/f(m-1) を計算する
+								for (int m = 0; m < nLigths; m++)
+								{
+									f2->push_back(f->at((m + 1) % nLigths) / referenceIntensity);
+								}
 
-							//値が不定値にならないための処理、データがない部分は計算を行わない
-							if (cv::norm(tempNormalVec) == 0)
-							{
-								referenceIntensity = 1;
 							}
-							else
-							{
-								//referenceIntensityの最小値は1/255とする
-								referenceIntensity = std::max(orenNayarReflectance(tempNormalVec, m_observedVec, m_referenceVec, sigma), (1.0 / 255));
-							}
-
-							//f2の入力 f(m)/f(m-1) を計算する
-							for (int m = 0; m < nLigthCount; m++)
-							{
-								f2->push_back(f->at((m + 1) % nLigthCount) / referenceIntensity);
-							}
-
 						}
+						m_featureList.push_back(f);
+						m_ratioFeatureList.push_back(f2);
+						m_responseList.push_back(r);
 					}
-					m_featureList.push_back(f);
-					m_ratioFeatureList.push_back(f2);
-					m_responseList.push_back(r);
-				}
-				else
-				{
-					delete r;
-					delete f;
-					delete f2;
+					else
+					{
+						delete r;
+						delete f;
+						delete f2;
+					}
 				}
 			}
 		}
@@ -334,39 +400,37 @@ namespace PhotometricStereo
 		return true;
 	}
 
-	bool CLearningBasedPhotometricStereo::syntheticImageLoader4Test(FeatureList & featureList, FeatureList & ratioFeatureList, std::string inFilePath, std::string outFolderPath, double sigma, bool albedoHandler, std::string textureFilePath)
+	bool CLearningBasedPhotometricStereo::syntheticImageLoader4Test(FeatureList & featureList, FeatureList & ratioFeatureList, std::string inFilePath, std::string outFolderPath, double sigma, std::string textureFilePath)
 	{
 		cv::Mat inputMat = cv::imread(inFilePath);
+		cv::Mat textureMat;
+
 		int nLigthCount = m_lightVecList.size();
+		bool albedoHandler;
 		if (inputMat.data == NULL)
 		{
 			std::cout << "readSyntheticImage4Test:imreadの失敗\n";
 			return false;
 		}
 
-		cv::Mat textureMat;
+		if (textureFilePath != "")
+			albedoHandler = true;
+		else
+			albedoHandler = false;
+
+		int c_min, r_min, newPicCol, newPicRow;
+		regionExtractor(r_min, c_min, newPicRow, newPicCol, inputMat);
+		inputMat = inputMat(cv::Rect(c_min, r_min, newPicCol, newPicRow));
+		cv::Mat alpha_image = alphaImageMaker(inputMat, 0);
+		cv::imwrite(outFolderPath + "/GroundTruth_normal.png", alpha_image);
+
 		if (albedoHandler)
 		{
 			textureMat = cv::imread(textureFilePath);
-
-			int tempColMin, tempRowMin, tempNewCol, tempNewRow;
-
-			regionExtractor(tempRowMin, tempColMin, tempNewRow, tempNewCol, textureMat);
-
-			textureMat = textureMat(cv::Rect(tempColMin, tempRowMin, tempNewCol, tempNewRow));
-
+			textureMat = textureMat(cv::Rect(c_min, r_min, newPicCol, newPicRow));
 			cv::Mat tempAlphaImage = alphaImageMaker(textureMat, 0);
 			cv::imwrite(outFolderPath + "/GroundTruth_texture.png", tempAlphaImage);
 		}
-
-		int c_min, r_min, newPicCol, newPicRow;
-
-		regionExtractor(r_min, c_min, newPicRow, newPicCol, inputMat);
-
-		inputMat = inputMat(cv::Rect(c_min, r_min, newPicCol, newPicRow));
-
-		cv::Mat alpha_image = alphaImageMaker(inputMat, 0);
-		cv::imwrite(outFolderPath + "/GroundTruth_normal.png", alpha_image);
 
 		//////////////////////////////////////////////////////////////////////
 		////////////////サイズ修正した画像に対して、処理の開始////////////////
@@ -375,33 +439,16 @@ namespace PhotometricStereo
 
 		double rho;
 
+		if (albedoHandler)
+			measurementImageMaker(normalizedMat, alpha_image, outFolderPath + "/GroundTruth_measurement_reference.png", m_observedVec, m_referenceVec, sigma, textureMat);
+		else
+			measurementImageMaker(normalizedMat, alpha_image, outFolderPath + "/GroundTruth_measurement_reference.png", m_observedVec, m_referenceVec, sigma);
 		for (int i = 0; i < nLigthCount; i++)
 		{
-			cv::Mat MatOrenNayar = cv::Mat::ones(normalizedMat.size(), CV_8UC1) * 255;
-
-			for (int y = 0; y < MatOrenNayar.rows; y++)
-			{
-				for (int x = 0; x < MatOrenNayar.cols; x++)
-				{
-					if (alpha_image.at<cv::Vec4b>(y, x)[3] != 0)
-					{
-						cv::Vec3d tempNormalVec = normalizedMat.at<cv::Vec3d>(y, x);
-						if (albedoHandler)
-						{
-							cv::Vec3d tempAlbedoVec = textureMat.at<cv::Vec3b>(y, x);
-							rho = rgb2gray(tempAlbedoVec(2), tempAlbedoVec(1), tempAlbedoVec(0)) / 255;
-						}
-						else
-						{
-							rho = 1;
-						}
-
-						MatOrenNayar.data[y * MatOrenNayar.step + x * MatOrenNayar.elemSize()] = (int)(std::max(orenNayarReflectance(tempNormalVec, m_observedVec, m_lightVecList[i], sigma, rho), 0.0) * 255);
-					}
-				}
-			}
-			cv::imwrite(outFolderPath + "/GroundTruth_measurement" + std::to_string(i) + ".png", MatOrenNayar);
-			
+			if(albedoHandler)
+				measurementImageMaker(normalizedMat, alpha_image, outFolderPath + "/GroundTruth_measurement" + std::to_string(i) + ".png", m_observedVec, m_lightVecList.at(i), sigma, textureMat);
+			else
+				measurementImageMaker(normalizedMat, alpha_image, outFolderPath + "/GroundTruth_measurement" + std::to_string(i) + ".png", m_observedVec, m_lightVecList.at(i), sigma);
 		}
 		for (int i = m_windowSize / 2; i < inputMat.rows - m_windowSize / 2; i++)
 		{
@@ -450,11 +497,11 @@ namespace PhotometricStereo
 						//値が不定値にならないための処理、データがない部分は計算を行わない
 						if (cv::norm(tempNormalVec) == 0)
 						{
-							referenceIntensity = 1;
+							referenceIntensity = 10000;
 						}
 						else
 						{
-							referenceIntensity = std::max(orenNayarReflectance(tempNormalVec, m_observedVec, m_referenceVec, sigma), (1.0 / 255));
+							referenceIntensity = std::max(orenNayarReflectance(tempNormalVec, m_observedVec, m_referenceVec, sigma, rho), (1.0 / 255));
 						}
 
 						//f2の入力 f(m)/f(m-1) を入力する
@@ -519,10 +566,18 @@ namespace PhotometricStereo
 		{
 			testMatList.at(i) = testMatList.at(i)(cv::Rect(c_min, r_min, newPicCol, newPicRow));
 			cv::imwrite(outFolderPath + fileNameList.at(i), testMatList.at(i));
+			if (is16bit)
+				testMatList.push_back(cv::imread(outFolderPath + fileNameList.at(i), cv::IMREAD_ANYDEPTH));
+			else
+				testMatList.push_back(cv::imread(outFolderPath + fileNameList.at(i), cv::IMREAD_GRAYSCALE));
 		}
 
 		referenceMat = referenceMat(cv::Rect(c_min, r_min, newPicCol, newPicRow));
-		cv::imwrite(outFolderPath + referenceFileName, referenceMat);
+		cv::imwrite(outFolderPath + "ref_" + referenceFileName, referenceMat);
+		if (is16bit)
+			referenceMat = cv::imread(outFolderPath + "ref_" + referenceFileName, cv::IMREAD_ANYDEPTH);
+		else
+			referenceMat = cv::imread(outFolderPath + "ref_" + referenceFileName, cv::IMREAD_GRAYSCALE);
 
 		cv::Mat alpha_image = alphaImageMaker(normalMat, 0);
 		cv::imwrite(outFolderPath + "GroundTruth_normal.png", alpha_image);
@@ -552,7 +607,7 @@ namespace PhotometricStereo
 							if(is16bit)
 								referenceIntensity = referenceMat.at<unsigned short>(i + k, j + l) / referenceLightInt;
 							else
-								referenceIntensity = referenceMat.data[(i + k) * referenceMat.cols + (j + l)] / referenceLightInt;
+								referenceIntensity = referenceMat.at<unsigned char>(i + k, j + l) / referenceLightInt;
 						}
 						for (int m = 0; m < nLigthCount; m++)
 						{
@@ -566,7 +621,7 @@ namespace PhotometricStereo
 								if(is16bit)
 									f->push_back(testMatList.at(m).at<unsigned short>(i + k, j + l) / lightIntList.at(m));
 								else
-									f->push_back(float(testMatList.at(m).data[(i + k) * testMatList.at(m).cols + (j + l)]) / lightIntList.at(m));
+									f->push_back(testMatList.at(m).at<unsigned char>(i + k, j + l) / lightIntList.at(m));
 							}
 						}
 						//f2の入力 f(m)/f(m-1) を入力する
@@ -591,9 +646,11 @@ namespace PhotometricStereo
 		std::cout << "kd-tree making start.\n";
 
 		boost::progress_timer timer;
-		//m_idx.build(m_featureListMat, cv::flann::KDTreeIndexParams(16), cvflann::FLANN_DIST_L1);
-		m_idx.build(m_featureListMat, cv::flann::LinearIndexParams(), cvflann::FLANN_DIST_L1);
-		std::cout << "kd-tree making finished. train time:";
+		m_idx.build(m_featureListMat, cv::flann::KDTreeIndexParams(16), cvflann::FLANN_DIST_L1);
+		//m_idx.build(m_featureListMat, cv::flann::LinearIndexParams(), cvflann::FLANN_DIST_L1);
+		std::cout << "kd-tree making finished.\n";
+		std::cout << "num of features:" << m_featureListMat.rows << std::endl;
+		std::cout << "train time:";
 		
 		return true;
 	}
@@ -602,9 +659,23 @@ namespace PhotometricStereo
 	{
 		int overDistCounts = 0;
 		int acceptedDistCounts = 0;
+		int nSigmas = m_sigmaList.size();
+		std::string sSigma;
+		if (nSigmas == 1)
+		{
+			sSigma = std::to_string(m_sigmaList.at(0));
+			UtilityMethod::deleteSuffix0(sSigma);
+			char tempChar = sSigma.back();
+			if (tempChar == ',')
+				sSigma.push_back('0');
+		}
 
 		//データの出力先のパスを入れる。
-		std::ofstream knnwriter(outFolderPath + "knn" + std::to_string(m_knnCounts) + ".csv");
+		std::ofstream knnwriter;
+		if (nSigmas == 1)
+			knnwriter.open(outFolderPath + "knn" + std::to_string(m_knnCounts) + "_" + sSigma + ".csv");
+		else
+			knnwriter.open(outFolderPath + "knn" + std::to_string(m_knnCounts) + ".csv");
 
 		cv::Mat_<int> indices; // dataの何行目か
 		cv::Mat_<float> dists; // それぞれどれだけの距離だったか
@@ -614,7 +685,7 @@ namespace PhotometricStereo
 		std::cout << "KnnSearch start." << std::endl;
 		boost::timer timer;
 
-		//同じfeatureなどを出力した場合に備えて2倍の量のsearchをしておく
+		//同じfeatureなどを出力した場合に備えて予備に10個のsearchをしておく
 		m_idx.knnSearch(queryMat, indices, dists, m_knnCounts + 10);
 
 		std::cout << "KnnSearch have finished.";
@@ -702,14 +773,18 @@ namespace PhotometricStereo
 		knnwriter.close();
 		std::cout << "knn result writing is finished." << "  CalcTime:" << timer.elapsed() << "[s]\n" << std::endl;
 
-		std::string inputknn = outFolderPath + "knn" + std::to_string(m_knnCounts) + ".csv";
+		std::string inputknn;
+		if(nSigmas == 1)
+			inputknn = outFolderPath + "knn" + std::to_string(m_knnCounts) + "_" + sSigma + ".csv";
+		else
+			inputknn = outFolderPath + "knn" + std::to_string(m_knnCounts) + ".csv";
+
 		std::string output = outFolderPath + "NearestNeighbor";
 
 		std::cout << "Image, Roughness : Png making start!" << std::endl;
 
 		timer.restart();
 		normalMapMaker(inputknn, output, testPicRow, testPicCol);
-
 		std::cout << "Image, Roughness : Png making finished!" << "  CalcTime:" << timer.elapsed() << "[s]\n" << std::endl;
 
 		std::string sGroundTruthPath = outFolderPath + "GroundTruth_normal.png";
@@ -721,11 +796,14 @@ namespace PhotometricStereo
 		std::cout << "精度 : (DataNumber , AvgError(rad) , Smoothness , EuclidDistance) : ( " << dEvaluation << " , " << dSmoothness << "," << dAvgDist << " )" << std::endl;
 		std::cout << "over distance:" << std::to_string(overDistCounts) << "\n";
 
-		std::ofstream evaluationWriter(outFolderPath + "AvgError.csv", std::ios_base::app);
-		//if (i == 0)
-			evaluationWriter << "Roughness,AvgError(rad),AvgError(deg),Smoothness,EuclidDistance" << std::endl;
-		evaluationWriter << "ALL," << dEvaluation << "," << dEvaluation * 180 / M_PI << "," << dSmoothness << "," << dAvgDist << std::endl;
+		std::ofstream evaluationWriter;
+		if(nSigmas == 1)
+			evaluationWriter.open(outFolderPath + "AvgError_" + sSigma + ".csv");
+		else
+			evaluationWriter.open(outFolderPath + "AvgError.csv");
 
+		evaluationWriter << "AvgError(rad),AvgError(deg),Smoothness,EuclidDistance" << std::endl;
+		evaluationWriter <<  dEvaluation << "," << dEvaluation * 180 / M_PI << "," << dSmoothness << "," << dAvgDist << std::endl;
 
 		return true;
 	}

@@ -32,7 +32,7 @@ namespace PhotometricStereo
 				releaseFeatureList(m_ratioFeatureList);
 		}
 
-		void init(std::vector<cv::Vec3d> lightVecList, cv::Vec3d referenceVec, cv::Vec3d observedVec);
+		void init(std::vector<cv::Vec3d> lightVecList, cv::Vec3d referenceVec, cv::Vec3d observedVec, std::vector<float> sigmaList);
 
 	private:
 		int m_windowSize;
@@ -49,6 +49,7 @@ namespace PhotometricStereo
 		std::vector<cv::Vec3d> m_lightVecList;
 		cv::Vec3d m_referenceVec;
 		cv::Vec3d m_observedVec;
+		std::vector<float> m_sigmaList;
 
 	public:
 		// Get/Set Property
@@ -58,19 +59,22 @@ namespace PhotometricStereo
 		void setReferenceVec(cv::Vec3d referenceVec);
 		cv::Vec3d getObservedVec();
 		void setObservedVec(cv::Vec3d observedVec);
+		std::vector<float> getSigmaList();
+		void setSigmaList(std::vector<float> sigmaList);
 
 		void releaseFeatureList(FeatureList &featureList);
 		void releaseResponseList(ResponseList &responseList);
 		cv::Mat featureList2Mat(FeatureList &featureList);
 
-		bool syntheticImageLoader4Train(std::string filePath, double sigma);
-		bool syntheticImageLoader4Test(FeatureList & featureList, FeatureList & ratioFeatureList, std::string inFilePath, std::string outFolderPath, double sigma, bool albedoHandler = false, std::string textureFilePath = "");
+		bool syntheticImageLoader4Train(std::string filePath);
+		bool syntheticImageLoader4Test(FeatureList & featureList, FeatureList & ratioFeatureList, std::string inFilePath, std::string outFolderPath, double sigma, std::string textureFilePath = "");
 		bool realImageLoader4Test(FeatureList & featureList, FeatureList & ratioFeatureList, std::string inFolderPath, std::vector<std::string> fileNameList, std::string referenceFileName, std::string outFolderPath, std::vector<double> lightIntList, double referenceLightInt, bool is16bit = false);
 	
 		bool train();
 		bool test(cv::Mat queryMat, std::string outFolderPath, int testPicRow, int testPicCol);
 
 	private:
+		bool measurementImageMaker(cv::Mat normalizedNormalMat, cv::Mat alphaImagedMat, std::string outFilePath, cv::Vec3d observedVec, cv::Vec3d lightVec, float sigma, cv::Mat textureMat = cv::imread(""));
 		cv::Mat matNormalizing(cv::Mat inputMat);
 	public:
 		bool normalMapMaker(std::string knnFilePath, std::string outFolderPath, int picRow, int picCol);
