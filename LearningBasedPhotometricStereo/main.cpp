@@ -13,7 +13,7 @@ namespace PhotometricStereo
 {
 	bool test()
 	{
-		CLearningBasedPhotometricStereo learningBasedPS;
+		CLearningBasedPhotometricStereo learningBasedPS(1,30);
 		std::string trainDir = "D:/Data/PhotometricStereo/TrainData/";
 		std::string testDir = "D:/Data/PhotometricStereo/TestData/";
 		std::string optionDir = "D:/Data/PhotometricStereo/TestData/Option/";
@@ -24,19 +24,19 @@ namespace PhotometricStereo
 		lightnumVec.push_back("10");
 
 		std::vector<std::string> testDataIndexVec;
-		//testDataIndexVec.push_back("20");
-		//testDataIndexVec.push_back("23");
-		//testDataIndexVec.push_back("24");
+		testDataIndexVec.push_back("20");
+		testDataIndexVec.push_back("23");
+		testDataIndexVec.push_back("24");
 
 		std::vector<std::string> albedoTestList;
-		albedoTestList.push_back("20");
+		//albedoTestList.push_back("20");
 
 		std::vector<float> sigmaList;
-		//sigmaList.push_back(0.0);
+		sigmaList.push_back(0.0);
 		sigmaList.push_back(0.1);
-		//sigmaList.push_back(0.2);
-		//sigmaList.push_back(0.3);
-		//sigmaList.push_back(0.4);
+		sigmaList.push_back(0.2);
+		sigmaList.push_back(0.3);
+		sigmaList.push_back(0.4);
 
 		int windowSize = 1;
 		std::vector<cv::Vec3d> lightVecList;
@@ -161,13 +161,13 @@ namespace PhotometricStereo
 	bool testReal()
 	{
 		std::string inFilePath = "D:/Data/PhotometricStereo/TrainDataBall/snapshot00.png";
-		//std::string dataName = "catPNG";
-		//std::string testDir = "D:/Data/PhotometricStereo/TestDataReal/" + dataName + "/";
-		//bool is16bit = true;
+		std::string dataName = "catPNG";
+		std::string testDir = "D:/Data/PhotometricStereo/TestDataReal/" + dataName + "/";
+		bool is16bit = true;
 
-		std::string dataName = "cat";
-		std::string testDir = "D:/Data/PhotometricStereo/PSData/" + dataName + "/";
-		bool is16bit = false;
+		//std::string dataName = "cat";
+		//std::string testDir = "D:/Data/PhotometricStereo/PSData/" + dataName + "/";
+		//bool is16bit = false;
 
 
 		std::vector<std::string> lightnumVec;
@@ -211,7 +211,7 @@ namespace PhotometricStereo
 				referenceInt = lightIntList.at(i);
 				referencePicName = readPngList.at(i);
 
-				CLearningBasedPhotometricStereo learningBasedPS;
+				CLearningBasedPhotometricStereo learningBasedPS(1,30);
 				learningBasedPS.init(lightVecList, referenceVec, observedVec, sigmaList);
 
 				std::cout << "training start.\n";
@@ -261,8 +261,8 @@ int main()
 	std::cout << "OpenMP : Enabled (Max # of threads = " << omp_get_max_threads() << ")" << std::endl;
 #endif
 
-	PhotometricStereo::test();
-	//PhotometricStereo::testReal();
+	//PhotometricStereo::test();
+	PhotometricStereo::testReal();
 	std::cout << "finished.\n";
 	std::string hoge;
 	std::cin >> hoge;

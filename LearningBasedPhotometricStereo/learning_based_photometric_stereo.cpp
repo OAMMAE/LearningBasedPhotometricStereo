@@ -5,6 +5,7 @@
 #include "utility.h"
 #include "utility_photometric_stereo.h"
 
+
 namespace PhotometricStereo
 {
 	void CLearningBasedPhotometricStereo::init(std::vector<cv::Vec3d> lightVecList, cv::Vec3d referenceVec, cv::Vec3d observedVec, std::vector<float> sigmaList)

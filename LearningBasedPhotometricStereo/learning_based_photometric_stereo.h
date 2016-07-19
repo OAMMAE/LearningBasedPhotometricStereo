@@ -10,12 +10,12 @@ namespace PhotometricStereo
 	public:
 		CLearningBasedPhotometricStereo(
 			const int windowSize = 1,
-			const int listReserveSize = 1000000,
 			const int knnCounts = 1,
+			const int listReserveSize = 1000000,
 			const float knnDistMax = 1000.0) :
 			m_windowSize(windowSize),
-			m_listReserveSize(listReserveSize),
 			m_knnCounts(knnCounts),
+			m_listReserveSize(listReserveSize),
 			m_knnDistMax(knnDistMax)
 		{
 		}
