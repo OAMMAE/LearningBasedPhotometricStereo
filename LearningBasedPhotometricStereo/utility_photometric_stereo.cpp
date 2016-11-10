@@ -323,7 +323,7 @@ namespace PhotometricStereo
 	/*
 	* groundTruth ‚Æ estimate ‚Ì“ñ‰æ‘œ‚Ìnormal‚Ì·‚ğHeatMap‚É‚·‚é
 	*/
-	bool createHeatMap(std::string groundTruth, std::string estimate, std::string outFileName, const int WSIZE, const double MAX_DEG)
+	bool heatMapMaker(std::string groundTruth, std::string estimate, std::string outFileName, const int WSIZE, const double MAX_DEG)
 	{
 		cv::Mat matTemp, matEstimate;
 		matTemp = cv::imread(groundTruth);
@@ -715,6 +715,27 @@ namespace PhotometricStereo
 
 		//cv::imwrite(outFilePath + "_normal.png", alpha_image);
 
+		return true;
+	}
+
+	//template<typename Type>
+	//bool vectorNormalizing(std::vector<Type>& vec)
+	//{
+	//	Type sum = 0.0;
+	//	for (int i = 0; i < vec.size(); i++)
+	//		sum += vec.at(i) * vec.at(i);
+	//	for (int i = 0; i < vec.size(); i++)
+	//		vec.at(i) = vec.at(i) / sum;
+	//	return true;
+	//}
+
+	bool vectorNormalizing(Feature& vec)
+	{
+		double sum = 0.0;
+		for (int i = 0; i < vec.size(); i++)
+			sum += vec.at(i) * vec.at(i);
+		for (int i = 0; i < vec.size(); i++)
+			vec.at(i) = vec.at(i) / sum;
 		return true;
 	}
 

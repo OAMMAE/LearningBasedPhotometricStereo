@@ -198,11 +198,36 @@ namespace PhotometricStereo
 		return normalizedMat;
 	}
 
-	bool CLearningBasedPhotometricStereo::normalMapMaker(std::string knnFilePath, std::string outFolderPath, int picRow, int picCol)
+	float CLearningBasedPhotometricStereo::getSigma(int index)
+	{
+		int nLists = m_sigmaIndexList.size();
+		float result = 0.0;
+		// i=0 のときはindexが0なので比較する必要がない
+		for (int i = 0; i < nLists; i++)
+		{
+			int tempIndex = m_sigmaIndexList.at(nLists - 1 - i)[0];
+			if (index >= tempIndex)
+			{
+				result = m_sigmaIndexList.at(nLists - 1 - i)[1];
+				return result;
+			}
+		}
+		std::cout << "getsigma():不正な入力値: 入力:"<< index << "出力のlastindex,max" << m_sigmaIndexList.at(nLists-1)[0] << "," << m_featureListMat.rows << "\n";
+		return 0.0;
+	}
+
+	bool CLearningBasedPhotometricStereo::estimatedMapMaker(std::string knnFilePath, std::string outFolderPath, int picRow, int picCol)
 	{
 		const int MAT_COL = picCol - m_windowSize + 1;
 
+		int nSigmas = m_sigmaList.size();
+
+		cv::Mat output_image_roughness_reference = cv::Mat::zeros(nSigmas, 1, CV_8UC1);
+		for (int i = 0; i < nSigmas; i++)
+			output_image_roughness_reference.data[i * output_image_roughness_reference.step] = 255 / nSigmas * i;;
+	
 		cv::Mat output_image = cv::Mat::zeros(picRow - m_windowSize + 1, MAT_COL, CV_8UC3);
+		cv::Mat output_image_roughness = cv::Mat::ones(picRow - m_windowSize + 1, MAT_COL, CV_8UC1) * 255;
 		std::ofstream ofs(outFolderPath + "_normal.csv");
 
 		std::ifstream csvknnwriter(knnFilePath);
@@ -278,6 +303,20 @@ namespace PhotometricStereo
 						output_image.data[j * output_image.step + i * output_image.elemSize() + 2 * output_image.elemSize1()] = 0;
 					}
 				}
+				else if (count == 5)
+				{
+					float tempSigma = std::stof(token);
+					if (zeroCount != 3)
+					{
+						for (int sigmaCount = 0; sigmaCount < nSigmas; sigmaCount++)
+						{
+							if (tempSigma == m_sigmaList.at(sigmaCount))
+							{
+								output_image_roughness.data[j * output_image_roughness.step + i * output_image_roughness.elemSize()] = 255 / nSigmas * sigmaCount;
+							}
+						}
+					}
+				}
 				count++;
 			}
 			if (bNN)
@@ -292,6 +331,8 @@ namespace PhotometricStereo
 		cv::Mat alpha_image = alphaImageMaker(output_image, 0);
 
 		cv::imwrite(outFolderPath + "_normal.png", alpha_image);
+		cv::imwrite(outFolderPath + "_roughness.png", output_image_roughness);
+		cv::imwrite(outFolderPath + "_roughness_reference.png", output_image_roughness_reference);
 
 		return true;
 	}
@@ -322,6 +363,10 @@ namespace PhotometricStereo
 
 		for (int nSigmaCount = 0; nSigmaCount < nSigmas; nSigmaCount++)
 		{
+			std::array<float, 2> tempIndex;
+			tempIndex[0] = m_responseList.size();
+			tempIndex[1] = m_sigmaList.at(nSigmaCount);
+			m_sigmaIndexList.push_back(tempIndex);
 			for (int i = m_windowSize / 2; i < normalizedMat.rows - m_windowSize / 2; i++)
 			{
 				for (int j = m_windowSize / 2; j < normalizedMat.cols - m_windowSize / 2; j++)
@@ -381,6 +426,7 @@ namespace PhotometricStereo
 
 							}
 						}
+						vectorNormalizing(*f);
 						m_featureList.push_back(f);
 						m_ratioFeatureList.push_back(f2);
 						m_responseList.push_back(r);
@@ -453,6 +499,16 @@ namespace PhotometricStereo
 		}
 		for (int i = m_windowSize / 2; i < inputMat.rows - m_windowSize / 2; i++)
 		{
+
+			//if (i % 2 == 0)
+			//{
+			//	sigma = sigma * 2;
+			//}
+			//else
+			//{
+			//	sigma = sigma / 2;
+			//}
+
 			for (int j = m_windowSize / 2; j < inputMat.cols - m_windowSize / 2; j++)
 			{
 				Feature *f = new Feature();
@@ -513,6 +569,7 @@ namespace PhotometricStereo
 
 					}
 				}
+				vectorNormalizing(*f);
 				featureList.push_back(f);
 				ratioFeatureList.push_back(f2);
 			}
@@ -632,6 +689,7 @@ namespace PhotometricStereo
 						}
 					}
 				}
+				vectorNormalizing(*f);
 				featureList.push_back(f);
 				ratioFeatureList.push_back(f2);
 			}
@@ -641,7 +699,8 @@ namespace PhotometricStereo
 
 	bool CLearningBasedPhotometricStereo::train()
 	{
-		m_featureListMat = featureList2Mat(m_ratioFeatureList);
+		m_featureListMat = featureList2Mat(m_featureList);
+		//m_featureListMat = featureList2Mat(m_ratioFeatureList);
 		releaseFeatureList(m_featureList);
 		releaseFeatureList(m_ratioFeatureList);
 		std::cout << "kd-tree making start.\n";
@@ -725,7 +784,7 @@ namespace PhotometricStereo
 			{
 				for (int k = 0; k < m_knnCounts; k++)
 				{
-					knnwriter << k << ",0,0,0,0" << std::endl;
+					knnwriter << k << ",0,0,0,0,0" << std::endl;
 				}
 			}
 			else
@@ -749,7 +808,7 @@ namespace PhotometricStereo
 							std::cout << "NEXT_DIST:" << dists(j, k + addition) << ", See." << std::endl;
 							while (k < m_knnCounts)
 							{
-								knnwriter << k << ",0,0,0," << m_knnDistMax << std::endl;
+								knnwriter << k << ",0,0,0," << m_knnDistMax << ",0" << std::endl;
 								k++;
 							}
 						}
@@ -757,7 +816,8 @@ namespace PhotometricStereo
 						{
 							tempNormalX = m_responseList.at(indices(j, k + addition))->at(0);
 							tempNormalY = m_responseList.at(indices(j, k + addition))->at(1);
-							knnwriter << k << "," << m_responseList.at(indices(j, k + addition))->at(0) << "," << m_responseList.at(indices(j, k + addition))->at(1) << "," << m_responseList.at(indices(j, k + addition))->at(2) << "," << dists(j, k + addition) << std::endl;
+							float tempSigma = getSigma(indices(j, k + addition));
+							knnwriter << k << "," << m_responseList.at(indices(j, k + addition))->at(0) << "," << m_responseList.at(indices(j, k + addition))->at(1) << "," << m_responseList.at(indices(j, k + addition))->at(2) << "," << dists(j, k + addition) << "," << tempSigma << std::endl;
 							k++;
 						}
 					}
@@ -785,7 +845,7 @@ namespace PhotometricStereo
 		std::cout << "Image, Roughness : Png making start!" << std::endl;
 
 		timer.restart();
-		normalMapMaker(inputknn, output, testPicRow, testPicCol);
+		estimatedMapMaker(inputknn, output, testPicRow, testPicCol);
 		std::cout << "Image, Roughness : Png making finished!" << "  CalcTime:" << timer.elapsed() << "[s]\n" << std::endl;
 
 		std::string sGroundTruthPath = outFolderPath + "GroundTruth_normal.png";

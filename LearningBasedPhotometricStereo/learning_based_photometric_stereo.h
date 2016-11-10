@@ -43,6 +43,8 @@ namespace PhotometricStereo
 		FeatureList m_featureList;
 		FeatureList m_ratioFeatureList;
 		ResponseList m_responseList;
+		// featureListをtrainした際のsigma(roughness)の値のindexのリスト [0]が開始index,[1]が範囲内のroughness
+		std::vector<std::array<float, 2>> m_sigmaIndexList;
 		cv::Mat m_featureListMat;
 		cv::flann::Index m_idx;
 
@@ -76,8 +78,10 @@ namespace PhotometricStereo
 	private:
 		bool measurementImageMaker(cv::Mat normalizedNormalMat, cv::Mat alphaImagedMat, std::string outFilePath, cv::Vec3d observedVec, cv::Vec3d lightVec, float sigma, cv::Mat textureMat = cv::imread(""));
 		cv::Mat matNormalizing(cv::Mat inputMat);
+		// response/feature Listのindexが与えられたとき、学習に用いたsigma(roughness)の値を返す。
+		float getSigma(int index);
 	public:
-		bool normalMapMaker(std::string knnFilePath, std::string outFolderPath, int picRow, int picCol);
+		bool estimatedMapMaker(std::string knnFilePath, std::string outFolderPath, int picRow, int picCol);
 	};
 }
 

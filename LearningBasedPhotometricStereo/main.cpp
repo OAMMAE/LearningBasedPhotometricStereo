@@ -13,20 +13,54 @@ namespace PhotometricStereo
 {
 	bool test()
 	{
-		CLearningBasedPhotometricStereo learningBasedPS(1,30);
+		int windowSize = 1;
+		int knnCounts = 30;
+		CLearningBasedPhotometricStereo learningBasedPS(windowSize, knnCounts);
 		std::string trainDir = "D:/Data/PhotometricStereo/TrainData/";
 		std::string testDir = "D:/Data/PhotometricStereo/TestData/";
-		std::string optionDir = "D:/Data/PhotometricStereo/TestData/Option/";
+		//std::string optionDir = "D:/Data/PhotometricStereo/TestData/Option/";
+		std::string optionDir = "D:/Data/PhotometricStereo/option/";
 
 		std::vector<std::string> roughnessVec;
-		roughnessVec.push_back("0.1");
+		//roughnessVec.push_back("0.3");
+		roughnessVec.push_back("0.5");
+		//roughnessVec.push_back("0.7");
 		std::vector<std::string> lightnumVec;
+		//lightnumVec.push_back("3");
+		//lightnumVec.push_back("4");
+		//lightnumVec.push_back("5");
+		//lightnumVec.push_back("6");
+		//lightnumVec.push_back("7");
+		//lightnumVec.push_back("8");
+		//lightnumVec.push_back("9");
 		lightnumVec.push_back("10");
 
+		std::vector<std::string> trainDataIndexVec;
+		trainDataIndexVec.push_back("00");
+		trainDataIndexVec.push_back("01");
+		trainDataIndexVec.push_back("02");
+		trainDataIndexVec.push_back("03");
+		trainDataIndexVec.push_back("04");
+		//trainDataIndexVec.push_back("05");
+		//trainDataIndexVec.push_back("06");
+		//trainDataIndexVec.push_back("07");
+		//trainDataIndexVec.push_back("08");
+		//trainDataIndexVec.push_back("09");
+
 		std::vector<std::string> testDataIndexVec;
-		testDataIndexVec.push_back("20");
-		testDataIndexVec.push_back("23");
-		testDataIndexVec.push_back("24");
+		//testDataIndexVec.push_back("20");
+		//testDataIndexVec.push_back("23");
+		//testDataIndexVec.push_back("1000");
+		testDataIndexVec.push_back("10");
+		testDataIndexVec.push_back("11");
+		testDataIndexVec.push_back("12");
+		testDataIndexVec.push_back("13");
+		testDataIndexVec.push_back("14");
+		testDataIndexVec.push_back("15");
+		testDataIndexVec.push_back("16");
+		testDataIndexVec.push_back("17");
+		testDataIndexVec.push_back("18");
+		testDataIndexVec.push_back("19");
 
 		std::vector<std::string> albedoTestList;
 		//albedoTestList.push_back("20");
@@ -37,25 +71,42 @@ namespace PhotometricStereo
 		sigmaList.push_back(0.2);
 		sigmaList.push_back(0.3);
 		sigmaList.push_back(0.4);
+		sigmaList.push_back(0.5);
+		sigmaList.push_back(0.6);
+		sigmaList.push_back(0.7);
+		
 
-		int windowSize = 1;
-		std::vector<cv::Vec3d> lightVecList;
 		cv::Vec3d referenceVec;
 		cv::Vec3d observedVec(1, 0, 0);
 
-		std::string inFilePath = "D:/Data/PhotometricStereo/TrainDataBall/snapshot00.png";
+		//std::string inFilePath = "D:/Data/PhotometricStereo/TrainDataBall/snapshot1000.png";
+
+		//読み込む画像をstringで保持
+		std::vector<std::string> readPngList;
+		picListLoader(readPngList, optionDir + "/filelist96.txt");
 
 		for (int lightCount = 0; lightCount < lightnumVec.size(); lightCount++)
 		{
-			//読み込む画像をstringで保持
-			std::vector<std::string> readPngList;
+			std::vector<cv::Vec3d> lightVecList;
+
+			////読み込む画像をstringで保持
+			//std::vector<std::string> readPngList;
+			//picListLoader(readPngList, optionDir + "filelist" + lightnumVec.at(lightCount) + ".txt");
+
 			//読み込む画像の番号をintで保持
 			std::vector<int> readDataIndexList;
 
-			picListLoader(readPngList, optionDir + "filelist" + lightnumVec.at(lightCount) + ".txt");
-			for (int i = 0; i < readPngList.size(); i++)
+			//読み込む画像をstringで保持
+			std::vector<std::string> tmpReadPngList;
+
+			if (atoi(lightnumVec.at(lightCount).c_str()) == 96)
+				tmpReadPngList = readPngList;
+			else
+				tmpReadPngList.assign(&readPngList.at(0), &readPngList.at(atoi(lightnumVec.at(lightCount).c_str())));
+
+			for (int i = 0; i < tmpReadPngList.size(); i++)
 			{
-				std::string temp = readPngList.at(i).substr(0, 3);
+				std::string temp = tmpReadPngList.at(i).substr(0, 3);
 				std::cout << temp << std::endl;
 				readDataIndexList.push_back(std::stoi(temp));
 			}
@@ -65,7 +116,9 @@ namespace PhotometricStereo
 			learningBasedPS.init(lightVecList, referenceVec, observedVec, sigmaList);
 
 			boost::timer timer;
-			learningBasedPS.syntheticImageLoader4Train(inFilePath);
+			for (int i = 0; i < trainDataIndexVec.size(); i++)
+				learningBasedPS.syntheticImageLoader4Train(trainDir + "snapshot" + trainDataIndexVec.at(i) + ".png");
+			//learningBasedPS.syntheticImageLoader4Train(inFilePath);
 			std::cout << "CalcTime:" << timer.elapsed() << "[s]\n";
 
 			learningBasedPS.train();
@@ -103,7 +156,7 @@ namespace PhotometricStereo
 
 
 				//file という名前のフォルダを作成する
-				file = file + "/1";
+				file = file + "/" + std::to_string(knnCounts);
 				UtilityMethod::mkdir(file);
 
 				std::string albedoFilePath = file + "/albedoTest";
@@ -146,7 +199,8 @@ namespace PhotometricStereo
 					else
 						learningBasedPS.syntheticImageLoader4Test(testfeatureList, testfeatureList2, testfilePath, tempFilePath, std::stod(roughnessVec.at(roughnessCount)), testDir + "Textured" + albedoTestList.at(i - testDataIndexVec.size()) + ".png");
 
-					cv::Mat queryMat = learningBasedPS.featureList2Mat(testfeatureList2);
+					cv::Mat queryMat = learningBasedPS.featureList2Mat(testfeatureList);
+					//cv::Mat queryMat = learningBasedPS.featureList2Mat(testfeatureList2);
 
 					learningBasedPS.releaseFeatureList(testfeatureList);
 					learningBasedPS.releaseFeatureList(testfeatureList2);
@@ -161,7 +215,10 @@ namespace PhotometricStereo
 	bool testReal()
 	{
 		std::string inFilePath = "D:/Data/PhotometricStereo/TrainDataBall/snapshot00.png";
-		std::string dataName = "catPNG";
+		std::string dataName = "pot1PNG";
+		//std::string dataName = "pot2PNG";
+		//std::string dataName = "catPNG";
+		//std::string dataName = "harvestPNG";
 		std::string testDir = "D:/Data/PhotometricStereo/TestDataReal/" + dataName + "/";
 		bool is16bit = true;
 
@@ -171,7 +228,8 @@ namespace PhotometricStereo
 
 
 		std::vector<std::string> lightnumVec;
-		lightnumVec.push_back("10");
+		//lightnumVec.push_back("10");
+		lightnumVec.push_back("96");
 
 		std::vector<float> sigmaList;
 		sigmaList.push_back(0.0);
@@ -204,14 +262,14 @@ namespace PhotometricStereo
 			}
 			lightVecListLoader(lightVecList, testDir + "/light_directions.txt", readDataIndexList);
 			lightIntListLoader(lightIntList, testDir + "/light_intensities.txt", readDataIndexList);
-
+//#pragma omp parallel for
 			for (int i = 0; i < lightVecList.size(); i++)
 			{
 				referenceVec = lightVecList.at(i);
 				referenceInt = lightIntList.at(i);
 				referencePicName = readPngList.at(i);
 
-				CLearningBasedPhotometricStereo learningBasedPS(1,30);
+				CLearningBasedPhotometricStereo learningBasedPS(1, 30);
 				learningBasedPS.init(lightVecList, referenceVec, observedVec, sigmaList);
 
 				std::cout << "training start.\n";
@@ -247,6 +305,8 @@ namespace PhotometricStereo
 				learningBasedPS.releaseFeatureList(testfeatureList2);
 
 				learningBasedPS.test(queryMat, outFolderPath, mPicRow, mPicCol);
+				heatMapMaker(outFolderPath + "GroundTruth_normal.png", outFolderPath + "NearestNeighbor_normal.png", outFolderPath + "HeatMap.png", windowSize, 20);
+							
 			}
 		}
 		return true;
@@ -254,18 +314,17 @@ namespace PhotometricStereo
 }
 
 
-int main()
+int main(int argc, char *argv[])
 {
 #ifdef _OPENMP
 	std::cout << "The number of processors is " << omp_get_num_procs() << std::endl;
 	std::cout << "OpenMP : Enabled (Max # of threads = " << omp_get_max_threads() << ")" << std::endl;
 #endif
 
-	//PhotometricStereo::test();
-	PhotometricStereo::testReal();
+	PhotometricStereo::test();
+	//PhotometricStereo::testReal();
 	std::cout << "finished.\n";
-	std::string hoge;
-	std::cin >> hoge;
-    return 0;
+	system("pause");
+	return 0;
 }
 

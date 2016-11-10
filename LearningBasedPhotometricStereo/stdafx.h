@@ -31,6 +31,7 @@
 #include <string>
 #include <direct.h>
 #include <vector>
+#include <array>
 
 #include <math.h>
 

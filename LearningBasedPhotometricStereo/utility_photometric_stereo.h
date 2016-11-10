@@ -6,6 +6,10 @@
 namespace PhotometricStereo
 {
 	void matPropertyPrinter(cv::Mat mat);
+	
+	//template<typename Type>
+	//bool vectorNormalizing(std::vector<Type> &vec);
+	bool vectorNormalizing(Feature &vec);
 
 	bool regionExtractor(int &r_min, int &c_min, int &newPicRow, int &newPicCol, cv::Mat inputMat);
 	cv::Mat alphaImageMaker(cv::Mat inputMat, int transValue);
@@ -17,9 +21,10 @@ namespace PhotometricStereo
 	bool lightVecListLoader(std::vector<cv::Vec3d> &lightVecList, std::string inFilePath, std::vector<int> readDataIndexList);
 	bool lightIntListLoader(std::vector<double> &lightIntList, std::string inFilePath, std::vector<int> readDataIndexList);
 
+	bool heatMapMaker(std::string groundTruth, std::string estimate, std::string outFileName, const int WSIZE, const double MAX_DEG);
+	//bool rougnessMapMaker(std::string outFileName, const int WSIZE, )
 
 	double evaluate(std::string groundTruth, std::string estimate, const int WSIZE);
-	bool createHeatMap(std::string groundTruth, std::string estimate, std::string outFileName, const int WSIZE, const double MAX_DEG);
 	bool maskImageMaker(std::string inputPic, std::string outputPic, const int THRESHOLD);
 
 	double calculateSmoothness(cv::Mat matNormalMap);
