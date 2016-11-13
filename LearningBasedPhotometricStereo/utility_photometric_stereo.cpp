@@ -734,6 +734,9 @@ namespace PhotometricStereo
 		double sum = 0.0;
 		for (int i = 0; i < vec.size(); i++)
 			sum += vec.at(i) * vec.at(i);
+		if (sum == 0.0)
+			return false;
+
 		for (int i = 0; i < vec.size(); i++)
 			vec.at(i) = vec.at(i) / sum;
 		return true;

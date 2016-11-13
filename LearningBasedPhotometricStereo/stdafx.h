@@ -46,4 +46,8 @@
 #include <boost/format.hpp>
 #include <boost/progress.hpp>
 
+#include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/json_parser.hpp>
+#include <boost/foreach.hpp>
+
 // TODO: プログラムに必要な追加ヘッダーをここで参照してください

@@ -73,7 +73,7 @@ namespace PhotometricStereo
 		bool realImageLoader4Test(FeatureList & featureList, FeatureList & ratioFeatureList, std::string inFolderPath, std::vector<std::string> fileNameList, std::string referenceFileName, std::string outFolderPath, std::vector<double> lightIntList, double referenceLightInt, bool is16bit = false);
 	
 		bool train();
-		bool test(cv::Mat queryMat, std::string outFolderPath, int testPicRow, int testPicCol);
+		bool test(cv::Mat queryMat, std::string outFolderPath, int testPicRow, int testPicCol, int dataIndex, boost::property_tree::ptree &child);
 
 	private:
 		bool measurementImageMaker(cv::Mat normalizedNormalMat, cv::Mat alphaImagedMat, std::string outFilePath, cv::Vec3d observedVec, cv::Vec3d lightVec, float sigma, cv::Mat textureMat = cv::imread(""));

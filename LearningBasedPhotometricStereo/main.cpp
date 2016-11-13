@@ -13,6 +13,9 @@ namespace PhotometricStereo
 {
 	bool test()
 	{
+		using namespace boost::property_tree;
+		ptree ptBase;
+
 		int windowSize = 1;
 		int knnCounts = 30;
 		CLearningBasedPhotometricStereo learningBasedPS(windowSize, knnCounts);
@@ -87,6 +90,7 @@ namespace PhotometricStereo
 
 		for (int lightCount = 0; lightCount < lightnumVec.size(); lightCount++)
 		{
+			ptree ptLight;
 			std::vector<cv::Vec3d> lightVecList;
 
 			////ì«Ç›çûÇﬁâÊëúÇstringÇ≈ï€éù
@@ -125,6 +129,7 @@ namespace PhotometricStereo
 
 			for (int roughnessCount = 0; roughnessCount < roughnessVec.size(); roughnessCount++)
 			{
+				ptree ptRoughness;
 
 				std::string sYN;
 				std::string sSigma;
@@ -205,15 +210,25 @@ namespace PhotometricStereo
 					learningBasedPS.releaseFeatureList(testfeatureList);
 					learningBasedPS.releaseFeatureList(testfeatureList2);
 
-					learningBasedPS.test(queryMat, tempFilePath, mPicRow, mPicCol);
+					learningBasedPS.test(queryMat, tempFilePath, mPicRow, mPicCol, i, ptRoughness);
 				}
+				ptLight.put("roughness", sSigma);
+				ptLight.add_child("info", ptRoughness);
 			}
+			ptBase.put("light", lightnumVec.at(lightCount));
+			ptBase.add_child("info", ptLight);
 		}
+
+		write_json(testDir + "AvgError.json", ptBase);
+		
 		return true;
 	}
 
 	bool testReal()
 	{
+		using namespace boost::property_tree;
+		ptree ptBase;
+
 		std::string inFilePath = "D:/Data/PhotometricStereo/TrainDataBall/snapshot00.png";
 		std::string dataName = "pot1PNG";
 		//std::string dataName = "pot2PNG";
@@ -243,6 +258,8 @@ namespace PhotometricStereo
 
 		for (int lightCount = 0; lightCount < lightnumVec.size(); lightCount++)
 		{
+			ptree ptLight;
+
 			std::string referencePicName;
 			std::vector<cv::Vec3d> lightVecList;
 			cv::Vec3d referenceVec;
@@ -304,7 +321,7 @@ namespace PhotometricStereo
 				learningBasedPS.releaseFeatureList(testfeatureList);
 				learningBasedPS.releaseFeatureList(testfeatureList2);
 
-				learningBasedPS.test(queryMat, outFolderPath, mPicRow, mPicCol);
+				learningBasedPS.test(queryMat, outFolderPath, mPicRow, mPicCol, 0, ptLight);
 				heatMapMaker(outFolderPath + "GroundTruth_normal.png", outFolderPath + "NearestNeighbor_normal.png", outFolderPath + "HeatMap.png", windowSize, 20);
 							
 			}

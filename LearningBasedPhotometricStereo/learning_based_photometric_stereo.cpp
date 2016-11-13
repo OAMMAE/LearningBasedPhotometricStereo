@@ -715,7 +715,7 @@ namespace PhotometricStereo
 		return true;
 	}
 
-	bool CLearningBasedPhotometricStereo::test(cv::Mat queryMat, std::string outFolderPath, int testPicRow, int testPicCol)
+	bool CLearningBasedPhotometricStereo::test(cv::Mat queryMat, std::string outFolderPath, int testPicRow, int testPicCol, int dataIndex, boost::property_tree::ptree &child)
 	{
 		int overDistCounts = 0;
 		int acceptedDistCounts = 0;
@@ -866,6 +866,13 @@ namespace PhotometricStereo
 		evaluationWriter << "AvgError(rad),AvgError(deg),Smoothness,EuclidDistance" << std::endl;
 		evaluationWriter <<  dEvaluation << "," << dEvaluation * 180 / M_PI << "," << dSmoothness << "," << dAvgDist << std::endl;
 
+		{
+			boost::property_tree::ptree info;
+			info.put("AvgError(rad)", dEvaluation);
+			info.put("AvgError(deg)", dEvaluation * 180 / M_PI);
+			info.put("name", dataIndex);
+			child.push_back(std::make_pair("", info));
+		}
 		return true;
 	}
 
