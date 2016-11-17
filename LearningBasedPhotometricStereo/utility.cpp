@@ -76,8 +76,9 @@ namespace UtilityMethod
 	/*
 	* folderNameという名前のフォルダを作る
 	*/
-	void mkdir(std::string folderName)
+	void str_mkdir(std::string folderName)
 	{
+#ifdef _MSC_VER 
 		//string から char* への変換
 		int len = folderName.length();
 		char* fname = new char[len + 1];
@@ -85,7 +86,9 @@ namespace UtilityMethod
 
 		_mkdir(fname);
 		delete fname;
-
+#else
+		mkdir(folderName.c_str(), 0777);
+#endif
 		return;
 	}
 

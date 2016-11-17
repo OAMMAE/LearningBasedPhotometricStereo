@@ -159,19 +159,19 @@ namespace PhotometricStereo
 
 				//file という名前のフォルダを作成する
 				std::string file = testDir + sDirName;
-				UtilityMethod::mkdir(file);
+				UtilityMethod::str_mkdir(file);
 
 				//file という名前のフォルダを作成する
 				file = file + "/PM" + std::to_string(windowSize) + "_" + std::to_string(lightVecList.size());
-				UtilityMethod::mkdir(file);
+				UtilityMethod::str_mkdir(file);
 
 
 				//file という名前のフォルダを作成する
 				file = file + "/" + std::to_string(knnCounts);
-				UtilityMethod::mkdir(file);
+				UtilityMethod::str_mkdir(file);
 
 				std::string albedoFilePath = file + "/albedoTest";
-				UtilityMethod::mkdir(albedoFilePath);
+				UtilityMethod::str_mkdir(albedoFilePath);
 				// Testing data loading
 #pragma omp parallel for
 				for (int i = 0; i < testDataIndexVec.size() + albedoTestList.size(); i++)
@@ -196,7 +196,7 @@ namespace PhotometricStereo
 						tempFilePath = file + "/albedoTest/" + albedoTestList.at(i - testDataIndexVec.size());
 					}
 
-					UtilityMethod::mkdir(tempFilePath);
+					UtilityMethod::str_mkdir(tempFilePath);
 					tempFilePath = tempFilePath + "/";
 
 					cv::Mat tempMat = cv::imread(testfilePath);
@@ -304,11 +304,11 @@ namespace PhotometricStereo
 
 				//outFolderPath という名前のフォルダを作成する
 				std::string outFolderPath = testDir + "/PM" + std::to_string(windowSize) + "_" + std::to_string(lightVecList.size());
-				UtilityMethod::mkdir(outFolderPath);
+				UtilityMethod::str_mkdir(outFolderPath);
 
 				//outFolderPath という名前のフォルダを作成する
 				outFolderPath = outFolderPath + "/1_" + std::to_string(i);
-				UtilityMethod::mkdir(outFolderPath);
+				UtilityMethod::str_mkdir(outFolderPath);
 				outFolderPath = outFolderPath + "/";
 
 				FeatureList testfeatureList;

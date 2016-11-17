@@ -8,7 +8,7 @@ namespace UtilityMethod
 	int partition(std::vector<int> &Index, std::vector<double> &Data, int i, int j, double x);
 	void quickSort(std::vector<int> &Index, std::vector<double> &Data, int i, int j);
 
-	void mkdir(std::string folderName);
+	void str_mkdir(std::string folderName);
 	void deleteSuffix0(std::string &string);
 
 
