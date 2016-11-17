@@ -706,11 +706,15 @@ namespace PhotometricStereo
 		std::cout << "kd-tree making start.\n";
 
 		boost::progress_timer timer;
+		time_t trainTime[2];
+		trainTime[0] = time(NULL);
 		m_idx.build(m_featureListMat, cv::flann::KDTreeIndexParams(16), cvflann::FLANN_DIST_L1);
 		//m_idx.build(m_featureListMat, cv::flann::LinearIndexParams(), cvflann::FLANN_DIST_L1);
+		trainTime[1] = time(NULL);
 		std::cout << "kd-tree making finished.\n";
 		std::cout << "num of features:" << m_featureListMat.rows << std::endl;
-		std::cout << "train time:";
+		std::cout << "train time(time_t) : " << difftime(trainTime[1], trainTime[0]) << "[s]\n";
+		std::cout << "train time(boost)  : ";
 		
 		return true;
 	}

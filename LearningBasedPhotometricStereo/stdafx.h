@@ -7,19 +7,27 @@
 
 #define _USE_MATH_DEFINES
 
+#ifdef _MSC_VER 
 #include "targetver.h"
+#endif
 
 ///////////////////////////////////////
 //////////自作ヘッダファイル///////////
 ///////////////////////////////////////
+#ifdef _MSC_VER 
 #include "opencv_library_controller.h"
+#endif
+
 #include "common.h"
 
 ///////////////////////////////////////
 //////////標準ヘッダファイル///////////
 ///////////////////////////////////////
 #include <stdio.h>
+
+#ifdef _MSC_VER 
 #include <tchar.h>
+#endif
 
 #include <stdlib.h>
 #include <time.h>
@@ -29,7 +37,13 @@
 #include <sstream>
 #include <iostream>
 #include <string>
-#include <direct.h>
+
+#ifdef _MSC_VER 
+#include <direct.h> // _mkdir for windows
+#else
+#include <sys/stat.h> // for os x
+#endif
+
 #include <vector>
 #include <array>
 
