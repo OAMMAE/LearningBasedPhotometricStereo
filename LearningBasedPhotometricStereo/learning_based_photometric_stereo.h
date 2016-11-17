@@ -19,7 +19,7 @@ namespace PhotometricStereo
 			m_knnDistMax(knnDistMax)
 		{
 		}
-		CLearningBasedPhotometricStereo::~CLearningBasedPhotometricStereo()
+		~CLearningBasedPhotometricStereo()
 		{
 			/////////////////////////////////////////////////////////////
 			//////////ƒ|ƒCƒ“ƒ^‚Å•Û‚µ‚Ä‚¢‚é‚à‚Ì‚Ìƒƒ‚ƒŠ‚Ì‰ğ•ú///////////
