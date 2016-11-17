@@ -25,7 +25,7 @@ namespace PhotometricStereo
 
 		std::vector<std::string> roughnessVec;
 		//roughnessVec.push_back("0.3");
-		roughnessVec.push_back("0.5");
+		roughnessVec.push_back("10.0");
 		//roughnessVec.push_back("0.7");
 		std::vector<std::string> lightnumVec;
 		lightnumVec.push_back("3");
@@ -341,6 +341,13 @@ int main(int argc, char *argv[])
 #ifdef _OPENMP
 	std::cout << "The number of processors is " << omp_get_num_procs() << std::endl;
 	std::cout << "OpenMP : Enabled (Max # of threads = " << omp_get_max_threads() << ")" << std::endl;
+	std::cout << "The number of using threads = " << omp_get_num_threads() << std::endl;
+	std::cout << "The number of max threads = " << omp_get_max_threads() << std::endl;
+	omp_set_num_threads(10);
+	std::cout << "The number of using threads = " << omp_get_num_threads() << std::endl;
+	std::cout << "The number of max threads = " << omp_get_max_threads() << std::endl;
+	//OMP_NUM_THREADS = 10;
+	//std::cout << "The number of using threads = " << omp_get_num_threads() << ")" << std::endl;
 #endif
 
 	if (argc < 2)
