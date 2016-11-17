@@ -11,7 +11,7 @@
 
 namespace PhotometricStereo
 {
-	bool test()
+	bool test(std::string homeDir)
 	{
 		using namespace boost::property_tree;
 		ptree ptBase;
@@ -19,10 +19,9 @@ namespace PhotometricStereo
 		int windowSize = 1;
 		int knnCounts = 10;
 		CLearningBasedPhotometricStereo learningBasedPS(windowSize, knnCounts);
-		std::string trainDir = "D:/Data/PhotometricStereo/TrainData/";
-		std::string testDir = "D:/Data/PhotometricStereo/TestData/";
-		//std::string optionDir = "D:/Data/PhotometricStereo/TestData/Option/";
-		std::string optionDir = "D:/Data/PhotometricStereo/option/";
+		std::string trainDir = homeDir + "/TrainData/";
+		std::string testDir = homeDir + "/TestData/";
+		std::string optionDir = homeDir + "/option/";
 
 		std::vector<std::string> roughnessVec;
 		//roughnessVec.push_back("0.3");
@@ -344,7 +343,15 @@ int main(int argc, char *argv[])
 	std::cout << "OpenMP : Enabled (Max # of threads = " << omp_get_max_threads() << ")" << std::endl;
 #endif
 
-	PhotometricStereo::test();
+	if (argc < 2)
+	{
+		std::cout << "invalid argument.\n 1:homeDir\n";
+		return 0;
+	}
+	std::string homeDir = argv[1];
+	//std::string homeDir = "D:/Data/PhotometricStereo/";
+
+	PhotometricStereo::test(homeDir);
 	//PhotometricStereo::testReal();
 	std::cout << "finished.\n";
 	system("pause");
