@@ -8,9 +8,21 @@
 
 namespace PhotometricStereo
 {
-	void CLearningBasedPhotometricStereo::init(std::vector<cv::Vec3d> lightVecList, cv::Vec3d referenceVec, cv::Vec3d observedVec, std::vector<float> sigmaList)
+	void CLearningBasedPhotometricStereo::init(std::vector<cv::Vec3d> lightVecListTrain, cv::Vec3d referenceVec, cv::Vec3d observedVec, std::vector<float> sigmaList)
 	{
-		m_lightVecList = lightVecList;
+		m_lightVecListTrain = lightVecListTrain;
+		m_referenceVec = referenceVec;
+		m_observedVec = observedVec;
+		m_sigmaList = sigmaList;
+		m_featureList.reserve(m_listReserveSize);
+		m_ratioFeatureList.reserve(m_listReserveSize);
+		m_responseList.reserve(m_listReserveSize);
+	}
+
+	void CLearningBasedPhotometricStereo::init(std::vector<cv::Vec3d> lightVecListTrain, std::vector<cv::Vec3d> lightVecListTest, cv::Vec3d referenceVec, cv::Vec3d observedVec, std::vector<float> sigmaList)
+	{
+		m_lightVecListTrain = lightVecListTrain;
+		m_lightVecListTest = lightVecListTest;
 		m_referenceVec = referenceVec;
 		m_observedVec = observedVec;
 		m_sigmaList = sigmaList;
@@ -20,13 +32,21 @@ namespace PhotometricStereo
 	}
 
 #pragma region Get/Set Property
-	std::vector<cv::Vec3d> CLearningBasedPhotometricStereo::getLightVecList()
+	std::vector<cv::Vec3d> CLearningBasedPhotometricStereo::getLightVecListTrain()
 	{
-		return m_lightVecList;
+		return m_lightVecListTrain;
 	}
-	void CLearningBasedPhotometricStereo::setLightVecList(std::vector<cv::Vec3d> lightVecList)
+	void CLearningBasedPhotometricStereo::setLightVecListTrain(std::vector<cv::Vec3d> lightVecList)
 	{
-		m_lightVecList = lightVecList;
+		m_lightVecListTrain = lightVecList;
+	}
+	std::vector<cv::Vec3d> CLearningBasedPhotometricStereo::getLightVecListTest()
+	{
+		return m_lightVecListTest;
+	}
+	void CLearningBasedPhotometricStereo::setLightVecListTest(std::vector<cv::Vec3d> lightVecList)
+	{
+		m_lightVecListTest = lightVecList;
 	}
 	cv::Vec3d CLearningBasedPhotometricStereo::getReferenceVec()
 	{
@@ -340,7 +360,7 @@ namespace PhotometricStereo
 	bool CLearningBasedPhotometricStereo::syntheticImageLoader4Train(std::string filePath)
 	{
 		cv::Mat inputMat = cv::imread(filePath);
-		int nLigths = m_lightVecList.size();
+		int nLigths = m_lightVecListTrain.size();
 		int nSigmas = m_sigmaList.size();
 
 		if (inputMat.data == NULL)
@@ -401,7 +421,7 @@ namespace PhotometricStereo
 									else
 									{
 										//法線と光ベクトルの内積が負ならば値を0にする
-										f->push_back(std::max(orenNayarReflectance(tempNormalVec, m_observedVec, m_lightVecList[m], m_sigmaList.at(nSigmaCount)), 0.0));
+										f->push_back(std::max(orenNayarReflectance(tempNormalVec, m_observedVec, m_lightVecListTrain[m], m_sigmaList.at(nSigmaCount)), 0.0));
 									}
 								}
 
@@ -452,7 +472,7 @@ namespace PhotometricStereo
 		cv::Mat inputMat = cv::imread(inFilePath);
 		cv::Mat textureMat;
 
-		int nLigthCount = m_lightVecList.size();
+		int nLigthCount = m_lightVecListTest.size();
 		bool albedoHandler;
 		if (inputMat.data == NULL)
 		{
@@ -493,9 +513,9 @@ namespace PhotometricStereo
 		for (int i = 0; i < nLigthCount; i++)
 		{
 			if(albedoHandler)
-				measurementImageMaker(normalizedMat, alpha_image, outFolderPath + "/GroundTruth_measurement" + std::to_string(i) + ".png", m_observedVec, m_lightVecList.at(i), sigma, textureMat);
+				measurementImageMaker(normalizedMat, alpha_image, outFolderPath + "/GroundTruth_measurement" + std::to_string(i) + ".png", m_observedVec, m_lightVecListTest.at(i), sigma, textureMat);
 			else
-				measurementImageMaker(normalizedMat, alpha_image, outFolderPath + "/GroundTruth_measurement" + std::to_string(i) + ".png", m_observedVec, m_lightVecList.at(i), sigma);
+				measurementImageMaker(normalizedMat, alpha_image, outFolderPath + "/GroundTruth_measurement" + std::to_string(i) + ".png", m_observedVec, m_lightVecListTest.at(i), sigma);
 		}
 		for (int i = m_windowSize / 2; i < inputMat.rows - m_windowSize / 2; i++)
 		{
@@ -545,7 +565,7 @@ namespace PhotometricStereo
 							else
 							{
 								//法線と光ベクトルの内積が負ならば値を0にする
-								f->push_back(std::max(orenNayarReflectance(tempNormalVec, m_observedVec, m_lightVecList[m], sigma, rho), 0.0));
+								f->push_back(std::max(orenNayarReflectance(tempNormalVec, m_observedVec, m_lightVecListTest[m], sigma, rho), 0.0));
 							}
 						}
 
@@ -719,7 +739,7 @@ namespace PhotometricStereo
 		return true;
 	}
 
-	bool CLearningBasedPhotometricStereo::test(cv::Mat queryMat, std::string outFolderPath, int testPicRow, int testPicCol, int dataIndex, boost::property_tree::ptree &child)
+	bool CLearningBasedPhotometricStereo::test(cv::Mat queryMat, std::string outFolderPath, int testPicRow, int testPicCol, std::string dataName, boost::property_tree::ptree &child)
 	{
 		int overDistCounts = 0;
 		int acceptedDistCounts = 0;
@@ -872,15 +892,37 @@ namespace PhotometricStereo
 
 		{
 			boost::property_tree::ptree info;
+			info.put("name", dataName);
 			info.put("AvgError(rad)", dEvaluation);
 			info.put("AvgError(deg)", dEvaluation * 180 / M_PI);
-			info.put("name", dataIndex);
 			child.push_back(std::make_pair("", info));
 		}
 		return true;
 	}
 
-
+	bool CLearningBasedPhotometricStereo::searchLightVec()
+	{
+		for (int i = 0; i < m_lightVecListTest.size(); i++)
+		{
+			double minAngError = 1000;
+			int minIndex = 0;
+			for (int j = 0; j < m_lightVecListTrain.size(); j++)
+			{
+				double cos = (m_lightVecListTrain.at(j)).dot(m_lightVecListTest.at(i));
+				if (cos > 1.0)
+					cos = 1.0;
+				double angError = acos(cos);
+				if (minAngError > angError)
+				{
+					minAngError = angError;
+					minIndex = j;
+				}
+			}
+			m_lightVecNnIndices.push_back(minIndex);
+			m_lightVecNnAngError.push_back(minAngError);
+		}
+		return true;
+	}
 }
 
 

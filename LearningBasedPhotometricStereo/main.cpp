@@ -38,9 +38,10 @@ namespace PhotometricStereo
 		//lightnumVec.push_back("10");
 
 		std::vector<std::string> trainDataIndexVec;
-		trainDataIndexVec.push_back("00");
-		trainDataIndexVec.push_back("01");
-		trainDataIndexVec.push_back("02");
+		trainDataIndexVec.push_back("0000");
+		//trainDataIndexVec.push_back("00");
+		//trainDataIndexVec.push_back("01");
+		//trainDataIndexVec.push_back("02");
 		//trainDataIndexVec.push_back("03");
 		//trainDataIndexVec.push_back("04");
 		//trainDataIndexVec.push_back("05");
@@ -81,9 +82,74 @@ namespace PhotometricStereo
 		sigmaList.push_back(20.0);
 		sigmaList.push_back(30.0);
 
-
+		std::vector<cv::Vec3d> lightVecListTrain;
 		cv::Vec3d referenceVec;
 		cv::Vec3d observedVec(1, 0, 0);
+
+		ptree ptTrain;
+
+		ptree ptTrainName;
+		for (int i = 0; i < trainDataIndexVec.size(); i++)
+		{
+			boost::property_tree::ptree info;
+			info.put("", trainDataIndexVec.at(i));
+			ptTrainName.push_back(std::make_pair("", info));
+		}
+		ptTrain.add_child("name", ptTrainName);
+
+		ptree ptTrainRoughness;
+		ptTrainRoughness.put("num", sigmaList.size());
+		{
+			ptree ptTrainRoughnessData;
+			for (int i = 0; i < sigmaList.size(); i++)
+			{
+				boost::property_tree::ptree info;
+				info.put("", sigmaList.at(i));
+				ptTrainRoughnessData.push_back(std::make_pair("", info));
+			}
+			ptTrainRoughness.add_child("data", ptTrainRoughnessData);
+		}
+		ptTrain.add_child("roughness", ptTrainRoughness);
+
+		ptree ptTrainLight;
+		{
+			////読み込む画像をstringで保持
+			std::vector<std::string> readPngList;
+			picListLoader(readPngList, optionDir + "filelist96.txt");
+
+			//読み込む画像の番号をintで保持
+			std::vector<int> readDataIndexList;
+
+			for (int i = 0; i < readPngList.size(); i++)
+			{
+				std::string temp = readPngList.at(i).substr(0, 3);
+				std::cout << temp << std::endl;
+				readDataIndexList.push_back(std::stoi(temp));
+			}
+			lightVecListLoader(lightVecListTrain, optionDir + "light_directions.txt", readDataIndexList);
+		}
+		ptTrainLight.put("num", lightVecListTrain.size());
+		{
+			ptree ptTrainLightData;
+			for (int i = 0; i < lightVecListTrain.size(); i++)
+			{
+				boost::property_tree::ptree info;
+				info.put("index", i);
+				info.put("x", lightVecListTrain.at(i)[2]);
+				info.put("y", lightVecListTrain.at(i)[1]);
+				info.put("z", lightVecListTrain.at(i)[0]);
+				ptTrainLightData.push_back(std::make_pair("", info));
+			}
+			ptTrainLight.add_child("data", ptTrainLightData);
+		}
+		ptTrain.add_child("light", ptTrainLight);
+
+		write_json(homeDir + "AvgError.json", ptTrain);
+		//write_json(homeDir + "AvgError2.json", ptTrainName);
+
+		return false;
+
+
 
 		//std::string inFilePath = "D:/Data/PhotometricStereo/TrainDataBall/snapshot1000.png";
 
@@ -94,7 +160,7 @@ namespace PhotometricStereo
 		for (int lightCount = 0; lightCount < lightnumVec.size(); lightCount++)
 		{
 			ptree ptLight;
-			std::vector<cv::Vec3d> lightVecList;
+			std::vector<cv::Vec3d> lightVecListTest;
 
 			////読み込む画像をstringで保持
 			std::vector<std::string> readPngList;
@@ -119,10 +185,11 @@ namespace PhotometricStereo
 				std::cout << temp << std::endl;
 				readDataIndexList.push_back(std::stoi(temp));
 			}
-			lightVecListLoader(lightVecList, optionDir + "light_directions.txt", readDataIndexList);
-			referenceVec = lightVecList.at(0);
+			lightVecListLoader(lightVecListTrain, optionDir + "light_directions.txt", readDataIndexList);
+			referenceVec = lightVecListTrain.at(0);
+			lightVecListTest = lightVecListTrain;
 
-			learningBasedPS.init(lightVecList, referenceVec, observedVec, sigmaList);
+			learningBasedPS.init(lightVecListTrain, referenceVec, observedVec, sigmaList);
 
 			boost::timer timer;
 			for (int i = 0; i < trainDataIndexVec.size(); i++)
@@ -161,7 +228,7 @@ namespace PhotometricStereo
 				UtilityMethod::str_mkdir(file);
 
 				//file という名前のフォルダを作成する
-				file = file + "/PM" + std::to_string(windowSize) + "_" + std::to_string(lightVecList.size());
+				file = file + "/PM" + std::to_string(windowSize) + "_" + std::to_string(lightVecListTest.size());
 				UtilityMethod::str_mkdir(file);
 
 
@@ -215,13 +282,16 @@ namespace PhotometricStereo
 					learningBasedPS.releaseFeatureList(testfeatureList);
 					learningBasedPS.releaseFeatureList(testfeatureList2);
 
-					learningBasedPS.test(queryMat, tempFilePath, mPicRow, mPicCol, i, ptRoughness);
+					if (i < testDataIndexVec.size())
+						learningBasedPS.test(queryMat, tempFilePath, mPicRow, mPicCol, testDataIndexVec.at(i), ptRoughness);
+					else
+						learningBasedPS.test(queryMat, tempFilePath, mPicRow, mPicCol, albedoTestList.at(i - testDataIndexVec.size()), ptRoughness);
 				}
 				ptLight.put("roughness", sSigma);
-				ptLight.add_child("info", ptRoughness);
+				ptLight.add_child("result", ptRoughness);
 			}
 			ptBase.put("light", lightnumVec.at(lightCount));
-			ptBase.add_child("info", ptLight);
+			ptBase.add_child("test_info", ptLight);
 		}
 
 		write_json(testDir + "AvgError.json", ptBase);
@@ -338,25 +408,26 @@ namespace PhotometricStereo
 
 int main(int argc, char *argv[])
 {
+	//if (argc < 3)
+	//{
+	//	std::cout << "invalid argument.\n1:homeDir, 2:num of threads\n";
+	//	system("pause");
+	//	return 0;
+	//}
+	//std::string homeDir = argv[1];
+	std::string homeDir = "D:/Data/PhotometricStereo/";
+	//int ompThreads = std::stoi(argv[2]);
+	int ompThreads = 4;
+
 #ifdef _OPENMP
 	std::cout << "The number of processors is " << omp_get_num_procs() << std::endl;
 	std::cout << "OpenMP : Enabled (Max # of threads = " << omp_get_max_threads() << ")" << std::endl;
 	std::cout << "The number of using threads = " << omp_get_num_threads() << std::endl;
 	std::cout << "The number of max threads = " << omp_get_max_threads() << std::endl;
-	omp_set_num_threads(10);
+	omp_set_num_threads(ompThreads);
 	std::cout << "The number of using threads = " << omp_get_num_threads() << std::endl;
 	std::cout << "The number of max threads = " << omp_get_max_threads() << std::endl;
-	//OMP_NUM_THREADS = 10;
-	//std::cout << "The number of using threads = " << omp_get_num_threads() << ")" << std::endl;
 #endif
-
-	if (argc < 2)
-	{
-		std::cout << "invalid argument.\n 1:homeDir\n";
-		return 0;
-	}
-	std::string homeDir = argv[1];
-	//std::string homeDir = "D:/Data/PhotometricStereo/";
 
 	PhotometricStereo::test(homeDir);
 	//PhotometricStereo::testReal();
