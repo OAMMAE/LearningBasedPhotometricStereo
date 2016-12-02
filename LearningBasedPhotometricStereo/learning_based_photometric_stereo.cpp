@@ -21,7 +21,7 @@ namespace PhotometricStereo
 
 	void CLearningBasedPhotometricStereo::init(std::vector<cv::Vec3d> lightVecListTrain, std::vector<cv::Vec3d> lightVecListTest, cv::Vec3d referenceVec, cv::Vec3d observedVec, std::vector<float> sigmaList)
 	{
-		m_lightVecListTrain = lightVecListTrain;
+		m_lightVecListTrainBase = lightVecListTrain;
 		m_lightVecListTest = lightVecListTest;
 		m_referenceVec = referenceVec;
 		m_observedVec = observedVec;
@@ -906,9 +906,9 @@ namespace PhotometricStereo
 		{
 			double minAngError = 1000;
 			int minIndex = 0;
-			for (int j = 0; j < m_lightVecListTrain.size(); j++)
+			for (int j = 0; j < m_lightVecListTrainBase.size(); j++)
 			{
-				double cos = (m_lightVecListTrain.at(j)).dot(m_lightVecListTest.at(i));
+				double cos = (m_lightVecListTrainBase.at(j)).dot(m_lightVecListTest.at(i));
 				if (cos > 1.0)
 					cos = 1.0;
 				double angError = acos(cos);
@@ -920,8 +920,35 @@ namespace PhotometricStereo
 			}
 			m_lightVecNnIndices.push_back(minIndex);
 			m_lightVecNnAngError.push_back(minAngError);
+			m_lightVecListTrain.push_back(m_lightVecListTrainBase.at(minIndex));
 		}
 		return true;
+	}
+
+	boost::property_tree::ptree CLearningBasedPhotometricStereo::getLightProp()
+	{
+		using namespace boost::property_tree;
+		ptree ptTestLight;
+		ptTestLight.put("num", m_lightVecListTest.size());
+		{
+			ptree ptTestLightData;
+			for (int i = 0; i < m_lightVecListTest.size(); i++)
+			{
+				boost::property_tree::ptree info;
+				info.put("index", i);
+				info.put("x", m_lightVecListTest.at(i)[2]);
+				info.put("y", m_lightVecListTest.at(i)[1]);
+				info.put("z", m_lightVecListTest.at(i)[0]);
+				info.put("trainNNindex", m_lightVecNnIndices.at(i));
+				info.put("trainNNangError", m_lightVecNnAngError.at(i));
+				info.put("trainNN_x", m_lightVecListTrain.at(i)[2]);
+				info.put("trainNN_y", m_lightVecListTrain.at(i)[1]);
+				info.put("trainNN_z", m_lightVecListTrain.at(i)[0]);
+				ptTestLightData.push_back(std::make_pair("", info));
+			}
+			ptTestLight.add_child("data", ptTestLightData);
+		}
+		return ptTestLight;
 	}
 }
 

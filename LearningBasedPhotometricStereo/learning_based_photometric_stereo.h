@@ -49,6 +49,7 @@ namespace PhotometricStereo
 		cv::Mat m_featureListMat;
 		cv::flann::Index m_idx;
 
+		std::vector<cv::Vec3d> m_lightVecListTrainBase;
 		std::vector<cv::Vec3d> m_lightVecListTrain;
 		std::vector<cv::Vec3d> m_lightVecListTest;
 		std::vector<int> m_lightVecNnIndices;
@@ -81,6 +82,7 @@ namespace PhotometricStereo
 		bool train();
 		bool test(cv::Mat queryMat, std::string outFolderPath, int testPicRow, int testPicCol, std::string dataName, boost::property_tree::ptree &child);
 		bool searchLightVec();
+		boost::property_tree::ptree getLightProp();
 
 	private:
 		bool measurementImageMaker(cv::Mat normalizedNormalMat, cv::Mat alphaImagedMat, std::string outFilePath, cv::Vec3d observedVec, cv::Vec3d lightVec, float sigma, cv::Mat textureMat = cv::imread(""));
