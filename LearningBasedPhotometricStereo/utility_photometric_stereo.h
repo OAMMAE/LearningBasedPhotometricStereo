@@ -18,6 +18,7 @@ namespace PhotometricStereo
 	double rgb2gray(double r, double g, double b);
 
 	bool picListLoader(std::vector<std::string> &picNameList, std::string inFilePath);
+	bool lightVecListMaker(std::vector<cv::Vec3d>& lightVecList, double maxTheta);
 	bool lightVecListLoader(std::vector<cv::Vec3d> &lightVecList, std::string inFilePath, std::vector<int> readDataIndexList);
 	bool lightIntListLoader(std::vector<double> &lightIntList, std::string inFilePath, std::vector<int> readDataIndexList);
 

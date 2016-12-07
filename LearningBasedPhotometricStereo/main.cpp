@@ -18,24 +18,25 @@ namespace PhotometricStereo
 
 		int windowSize = 1;
 		int knnCounts = 10;
-		CLearningBasedPhotometricStereo learningBasedPS(windowSize, knnCounts);
 		std::string trainDir = homeDir + "/TrainData/";
 		std::string testDir = homeDir + "/TestData/";
 		std::string optionDir = homeDir + "/option/";
 
 		std::vector<std::string> roughnessVec;
-		//roughnessVec.push_back("0.3");
-		roughnessVec.push_back("10.0");
+		roughnessVec.push_back("0.3");
+		//roughnessVec.push_back("0.5");
+		//roughnessVec.push_back("10.0");
+		//roughnessVec.push_back("20.0");
 		//roughnessVec.push_back("0.7");
 		std::vector<std::string> lightnumVec;
 		lightnumVec.push_back("3");
 		//lightnumVec.push_back("4");
-		//lightnumVec.push_back("5");
+		lightnumVec.push_back("5");
 		//lightnumVec.push_back("6");
 		//lightnumVec.push_back("7");
 		//lightnumVec.push_back("8");
 		//lightnumVec.push_back("9");
-		//lightnumVec.push_back("10");
+		lightnumVec.push_back("10");
 
 		std::vector<std::string> trainDataIndexVec;
 		//trainDataIndexVec.push_back("0000");
@@ -57,7 +58,7 @@ namespace PhotometricStereo
 		testDataIndexVec.push_back("10");
 		testDataIndexVec.push_back("11");
 		testDataIndexVec.push_back("12");
-		testDataIndexVec.push_back("13");
+		//testDataIndexVec.push_back("13");
 		//testDataIndexVec.push_back("14");
 		//testDataIndexVec.push_back("15");
 		//testDataIndexVec.push_back("16");
@@ -69,18 +70,18 @@ namespace PhotometricStereo
 		albedoTestList.push_back("20");
 
 		std::vector<float> sigmaList;
-		//sigmaList.push_back(0.0);
-		//sigmaList.push_back(0.1);
-		//sigmaList.push_back(0.2);
-		//sigmaList.push_back(0.3);
+		sigmaList.push_back(0.0);
+		sigmaList.push_back(0.1);
+		sigmaList.push_back(0.2);
+		sigmaList.push_back(0.3);
 		//sigmaList.push_back(0.4);
 		//sigmaList.push_back(0.5);
 		//sigmaList.push_back(0.6);
 		//sigmaList.push_back(0.7);
-		sigmaList.push_back(0.0);
-		sigmaList.push_back(10.0);
-		sigmaList.push_back(20.0);
-		sigmaList.push_back(30.0);
+		//sigmaList.push_back(0.0);
+		//sigmaList.push_back(10.0);
+		//sigmaList.push_back(20.0);
+		//sigmaList.push_back(30.0);
 
 		std::vector<cv::Vec3d> lightVecListTrain;
 		cv::Vec3d referenceVec;
@@ -129,6 +130,7 @@ namespace PhotometricStereo
 				readDataIndexList.push_back(std::stoi(temp));
 			}
 			lightVecListLoader(lightVecListTrain, optionDir + "light_directions.txt", readDataIndexList);
+			//lightVecListMaker(lightVecListTrain, 45);
 		}
 		ptTrainLight.put("num", lightVecListTrain.size());
 		{
@@ -152,17 +154,13 @@ namespace PhotometricStereo
 		//std::string inFilePath = "D:/Data/PhotometricStereo/TrainDataBall/snapshot1000.png";
 
 		//“Ç‚İ‚Ş‰æ‘œ‚ğstring‚Å•Û
-		//std::vector<std::string> readPngList;
-		//picListLoader(readPngList, optionDir + "/filelist96.txt");
+		std::vector<std::string> readPngList;
+		picListLoader(readPngList, optionDir + "/filelist96.txt");
 
 		for (int lightCount = 0; lightCount < lightnumVec.size(); lightCount++)
 		{
 			ptree ptLight;
 			std::vector<cv::Vec3d> lightVecListTest;
-
-			////“Ç‚İ‚Ş‰æ‘œ‚ğstring‚Å•Û
-			std::vector<std::string> readPngList;
-			picListLoader(readPngList, optionDir + "filelist" + lightnumVec.at(lightCount) + ".txt");
 
 			//“Ç‚İ‚Ş‰æ‘œ‚Ì”Ô†‚ğint‚Å•Û
 			std::vector<int> readDataIndexList;
@@ -170,12 +168,15 @@ namespace PhotometricStereo
 			//“Ç‚İ‚Ş‰æ‘œ‚ğstring‚Å•Û
 			std::vector<std::string> tmpReadPngList;
 
-			tmpReadPngList = readPngList;
+			////“Ç‚İ‚Ş‰æ‘œ‚ğstring‚Å•Û
+			//std::vector<std::string> readPngList;
+			//picListLoader(readPngList, optionDir + "filelist" + lightnumVec.at(lightCount) + ".txt");
+			//tmpReadPngList = readPngList;
 
-			//if (atoi(lightnumVec.at(lightCount).c_str()) == 96)
-			//	tmpReadPngList = readPngList;
-			//else
-			//	tmpReadPngList.assign(&readPngList.at(0), &readPngList.at(atoi(lightnumVec.at(lightCount).c_str())));
+			if (atoi(lightnumVec.at(lightCount).c_str()) == 96)
+				tmpReadPngList = readPngList;
+			else
+				tmpReadPngList.assign(&readPngList.at(0), &readPngList.at(atoi(lightnumVec.at(lightCount).c_str())));
 
 			for (int i = 0; i < tmpReadPngList.size(); i++)
 			{
@@ -183,10 +184,11 @@ namespace PhotometricStereo
 				std::cout << temp << std::endl;
 				readDataIndexList.push_back(std::stoi(temp));
 			}
-			lightVecListLoader(lightVecListTest, optionDir + "light_directions0.txt", readDataIndexList);
+			lightVecListLoader(lightVecListTest, optionDir + "light_directions.txt", readDataIndexList);
 			referenceVec = lightVecListTrain.at(0);
 			//lightVecListTest = lightVecListTrain;
 
+			CLearningBasedPhotometricStereo learningBasedPS(windowSize, knnCounts);
 			learningBasedPS.init(lightVecListTrain, lightVecListTest, referenceVec, observedVec, sigmaList);
 
 			learningBasedPS.searchLightVec();

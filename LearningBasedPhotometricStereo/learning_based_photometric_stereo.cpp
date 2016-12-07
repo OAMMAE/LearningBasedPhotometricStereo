@@ -878,6 +878,8 @@ namespace PhotometricStereo
 		cv::Mat matEstimateNormalMap = cv::imread(sEstimatePath);
 		double dSmoothness = calculateSmoothness(matEstimateNormalMap);
 		double dEvaluation = evaluate(sGroundTruthPath, sEstimatePath, m_windowSize);
+		heatMapMaker(sGroundTruthPath, sEstimatePath, outFolderPath + "HeatMap.png", m_windowSize, 20);
+
 		std::cout << "¸“x : (DataNumber , AvgError(rad) , Smoothness , EuclidDistance) : ( " << dEvaluation << " , " << dSmoothness << "," << dAvgDist << " )" << std::endl;
 		std::cout << "over distance:" << std::to_string(overDistCounts) << "\n";
 

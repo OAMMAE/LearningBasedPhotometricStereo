@@ -155,6 +155,28 @@ namespace PhotometricStereo
 		return true;
 	}
 
+	bool lightVecListMaker(std::vector<cv::Vec3d>& lightVecList, double maxTheta)
+	{
+		for (int theta = 0; theta < maxTheta; theta++)
+		{
+			double thetaRad = theta * M_PI / 180.0;
+			for (int phi = 0; phi < 360; phi++)
+			{
+				double phiRad = phi * M_PI / 180.0;
+				double tempX, tempY, tempZ;
+
+				tempX = sin(thetaRad) * cos(phiRad);
+				tempY = sin(thetaRad) * sin(phiRad);
+				tempZ = cos(thetaRad);
+
+				cv::Vec3d tempL(tempZ, tempY, tempX);
+				tempL = tempL / cv::norm(tempL);
+				lightVecList.push_back(tempL);
+			}
+		}
+		return true;
+	}
+
 	/*
 	* lightVecList‚ÉŒõŒ¹ƒxƒNƒgƒ‹‚ðŠi”[,delimiter ‚Í' '‚©','
 	*/
@@ -734,6 +756,9 @@ namespace PhotometricStereo
 		double sum = 0.0;
 		for (int i = 0; i < vec.size(); i++)
 			sum += vec.at(i) * vec.at(i);
+
+		sum = sqrt(sum);
+
 		if (sum == 0.0)
 			return false;
 
