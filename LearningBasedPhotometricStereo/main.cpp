@@ -23,15 +23,18 @@ namespace PhotometricStereo
 		std::string optionDir = homeDir + "/option/";
 
 		std::vector<std::string> roughnessVec;
+		roughnessVec.push_back("0.0");
+		roughnessVec.push_back("0.1");
 		roughnessVec.push_back("0.3");
-		//roughnessVec.push_back("0.5");
-		//roughnessVec.push_back("10.0");
+		roughnessVec.push_back("0.5");
+		roughnessVec.push_back("1.0");
+		roughnessVec.push_back("10.0");
 		//roughnessVec.push_back("20.0");
 		//roughnessVec.push_back("0.7");
 		std::vector<std::string> lightnumVec;
-		lightnumVec.push_back("3");
+		//lightnumVec.push_back("3");
 		//lightnumVec.push_back("4");
-		lightnumVec.push_back("5");
+		//lightnumVec.push_back("5");
 		//lightnumVec.push_back("6");
 		//lightnumVec.push_back("7");
 		//lightnumVec.push_back("8");
@@ -39,10 +42,10 @@ namespace PhotometricStereo
 		lightnumVec.push_back("10");
 
 		std::vector<std::string> trainDataIndexVec;
-		//trainDataIndexVec.push_back("0000");
-		trainDataIndexVec.push_back("00");
-		trainDataIndexVec.push_back("01");
-		trainDataIndexVec.push_back("02");
+		trainDataIndexVec.push_back("0000");
+		//trainDataIndexVec.push_back("00");
+		//trainDataIndexVec.push_back("01");
+		//trainDataIndexVec.push_back("02");
 		//trainDataIndexVec.push_back("03");
 		//trainDataIndexVec.push_back("04");
 		//trainDataIndexVec.push_back("05");
@@ -56,8 +59,8 @@ namespace PhotometricStereo
 		//testDataIndexVec.push_back("23");
 		//testDataIndexVec.push_back("1000");
 		testDataIndexVec.push_back("10");
-		testDataIndexVec.push_back("11");
-		testDataIndexVec.push_back("12");
+		//testDataIndexVec.push_back("11");
+		//testDataIndexVec.push_back("12");
 		//testDataIndexVec.push_back("13");
 		//testDataIndexVec.push_back("14");
 		//testDataIndexVec.push_back("15");
@@ -72,14 +75,14 @@ namespace PhotometricStereo
 		std::vector<float> sigmaList;
 		sigmaList.push_back(0.0);
 		sigmaList.push_back(0.1);
-		sigmaList.push_back(0.2);
+		//sigmaList.push_back(0.2);
 		sigmaList.push_back(0.3);
 		//sigmaList.push_back(0.4);
-		//sigmaList.push_back(0.5);
+		sigmaList.push_back(0.5);
 		//sigmaList.push_back(0.6);
 		//sigmaList.push_back(0.7);
-		//sigmaList.push_back(0.0);
-		//sigmaList.push_back(10.0);
+		sigmaList.push_back(1.0);
+		sigmaList.push_back(10.0);
 		//sigmaList.push_back(20.0);
 		//sigmaList.push_back(30.0);
 
@@ -411,16 +414,17 @@ namespace PhotometricStereo
 
 int main(int argc, char *argv[])
 {
-	//if (argc < 3)
-	//{
-	//	std::cout << "invalid argument.\n1:homeDir, 2:num of threads\n";
-	//	system("pause");
-	//	return 0;
-	//}
-	//std::string homeDir = argv[1];
-	std::string homeDir = "D:/Data/PhotometricStereo/";
-	//int ompThreads = std::stoi(argv[2]);
-	int ompThreads = 4;
+	if (argc < 3)
+	{
+		std::cout << "invalid argument.\n1:homeDir, 2:num of threads\n";
+		system("pause");
+		return 0;
+	}
+	std::string homeDir = argv[1];
+	int ompThreads = std::stoi(argv[2]);
+
+	//std::string homeDir = "D:/Data/PhotometricStereo/";
+	//int ompThreads = 4;
 
 #ifdef _OPENMP
 	std::cout << "The number of processors is " << omp_get_num_procs() << std::endl;
