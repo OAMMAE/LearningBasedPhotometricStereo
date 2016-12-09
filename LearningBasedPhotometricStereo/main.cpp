@@ -129,8 +129,8 @@ namespace PhotometricStereo
 				std::cout << temp << std::endl;
 				readDataIndexList.push_back(std::stoi(temp));
 			}
-			lightVecListLoader(lightVecListTrain, optionDir + "light_directions.txt", readDataIndexList);
-			//lightVecListMaker(lightVecListTrain, 45);
+			//lightVecListLoader(lightVecListTrain, optionDir + "light_directions.txt", readDataIndexList);
+			lightVecListMaker(lightVecListTrain, 45);
 		}
 		ptTrainLight.put("num", lightVecListTrain.size());
 		{
