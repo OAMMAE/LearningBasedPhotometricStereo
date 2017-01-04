@@ -11,7 +11,7 @@
 
 namespace PhotometricStereo
 {
-	bool test(std::string homeDir)
+	bool test(std::string homeDir, std::string lightFileSuffix)
 	{
 		using namespace boost::property_tree;
 		ptree ptBase;
@@ -32,13 +32,13 @@ namespace PhotometricStereo
 		//roughnessVec.push_back("20.0");
 		//roughnessVec.push_back("0.7");
 		std::vector<std::string> lightnumVec;
-		//lightnumVec.push_back("3");
-		//lightnumVec.push_back("4");
-		//lightnumVec.push_back("5");
-		//lightnumVec.push_back("6");
-		//lightnumVec.push_back("7");
-		//lightnumVec.push_back("8");
-		//lightnumVec.push_back("9");
+		lightnumVec.push_back("3");
+		lightnumVec.push_back("4");
+		lightnumVec.push_back("5");
+		lightnumVec.push_back("6");
+		lightnumVec.push_back("7");
+		lightnumVec.push_back("8");
+		lightnumVec.push_back("9");
 		lightnumVec.push_back("10");
 
 		std::vector<std::string> trainDataIndexVec;
@@ -58,15 +58,20 @@ namespace PhotometricStereo
 		//testDataIndexVec.push_back("20");
 		//testDataIndexVec.push_back("23");
 		//testDataIndexVec.push_back("1000");
+		testDataIndexVec.push_back("00");
+		testDataIndexVec.push_back("02");
+		testDataIndexVec.push_back("04");
+		testDataIndexVec.push_back("06");
+		testDataIndexVec.push_back("08");
 		testDataIndexVec.push_back("10");
 		//testDataIndexVec.push_back("11");
-		//testDataIndexVec.push_back("12");
+		testDataIndexVec.push_back("12");
 		//testDataIndexVec.push_back("13");
-		//testDataIndexVec.push_back("14");
+		testDataIndexVec.push_back("14");
 		//testDataIndexVec.push_back("15");
-		//testDataIndexVec.push_back("16");
+		testDataIndexVec.push_back("16");
 		//testDataIndexVec.push_back("17");
-		//testDataIndexVec.push_back("18");
+		testDataIndexVec.push_back("18");
 		//testDataIndexVec.push_back("19");
 
 		std::vector<std::string> albedoTestList;
@@ -132,7 +137,7 @@ namespace PhotometricStereo
 				std::cout << temp << std::endl;
 				readDataIndexList.push_back(std::stoi(temp));
 			}
-			lightVecListLoader(lightVecListTrain, optionDir + "light_directions.txt", readDataIndexList);
+			lightVecListLoader(lightVecListTrain, optionDir + "light_directions" + lightFileSuffix + ".txt", readDataIndexList);
 			//lightVecListMaker(lightVecListTrain, 45);
 		}
 		ptTrainLight.put("num", lightVecListTrain.size());
@@ -150,8 +155,8 @@ namespace PhotometricStereo
 			ptTrainLight.add_child("data", ptTrainLightData);
 		}
 		ptTrain.add_child("light", ptTrainLight);
-
-		write_json(homeDir + "train_info.json", ptTrain);
+		
+		write_json(homeDir + "train_info" + lightFileSuffix + ".json", ptTrain);
 
 
 		//std::string inFilePath = "D:/Data/PhotometricStereo/TrainDataBall/snapshot1000.png";
@@ -162,7 +167,6 @@ namespace PhotometricStereo
 
 		for (int lightCount = 0; lightCount < lightnumVec.size(); lightCount++)
 		{
-			ptree ptLight;
 			std::vector<cv::Vec3d> lightVecListTest;
 
 			//読み込む画像の番号をintで保持
@@ -187,7 +191,7 @@ namespace PhotometricStereo
 				std::cout << temp << std::endl;
 				readDataIndexList.push_back(std::stoi(temp));
 			}
-			lightVecListLoader(lightVecListTest, optionDir + "light_directions.txt", readDataIndexList);
+			lightVecListLoader(lightVecListTest, optionDir + "light_directions" + lightFileSuffix + ".txt", readDataIndexList);
 			referenceVec = lightVecListTrain.at(0);
 			//lightVecListTest = lightVecListTrain;
 
@@ -206,6 +210,7 @@ namespace PhotometricStereo
 
 			for (int roughnessCount = 0; roughnessCount < roughnessVec.size(); roughnessCount++)
 			{
+				ptree ptLight;
 				ptree ptRoughness;
 
 				std::string sYN;
@@ -237,7 +242,7 @@ namespace PhotometricStereo
 
 
 				//file という名前のフォルダを作成する
-				file = file + "/" + std::to_string(knnCounts);
+				file = file + "/" + std::to_string(trainDataIndexVec.size());
 				UtilityMethod::str_mkdir(file);
 
 				std::string albedoFilePath = file + "/albedoTest";
@@ -250,9 +255,8 @@ namespace PhotometricStereo
 					FeatureList testfeatureList2;
 					//ResponseList testresponseList;
 
-					//file という名前のフォルダを作成する
-					std::string tempFilePath = "";
 
+					std::string tempFilePath = "";
 					std::string testfilePath;
 
 					if (i < testDataIndexVec.size())
@@ -266,6 +270,8 @@ namespace PhotometricStereo
 						tempFilePath = file + "/albedoTest/" + albedoTestList.at(i - testDataIndexVec.size());
 					}
 
+					UtilityMethod::str_mkdir(tempFilePath);
+					tempFilePath = tempFilePath + "/" + lightFileSuffix;
 					UtilityMethod::str_mkdir(tempFilePath);
 					tempFilePath = tempFilePath + "/";
 
@@ -293,14 +299,13 @@ namespace PhotometricStereo
 				}
 				ptLight.put("roughness", sSigma);
 				ptLight.add_child("result", ptRoughness);
+				ptBase.add_child("test_info", ptLight);
 			}
 			ptree ptTestLight = learningBasedPS.getLightProp();
-			ptLight.add_child("light", ptTestLight);
-
-			ptBase.add_child("test_info", ptLight);
+			ptBase.add_child("light", ptTestLight);
 		}
 
-		write_json(testDir + "AvgError.json", ptBase);
+		write_json(testDir + "AvgError" + lightFileSuffix + ".json", ptBase);
 		
 		return true;
 	}
@@ -414,17 +419,19 @@ namespace PhotometricStereo
 
 int main(int argc, char *argv[])
 {
-	if (argc < 3)
+	if (argc < 4)
 	{
-		std::cout << "invalid argument.\n1:homeDir, 2:num of threads\n";
+		std::cout << "invalid argument.\n1:homeDir, 2:num of threads, 3:light index\n";
 		system("pause");
 		return 0;
 	}
 	std::string homeDir = argv[1];
 	int ompThreads = std::stoi(argv[2]);
+	std::string lightFileSuffix = argv[3];
 
 	//std::string homeDir = "D:/Data/PhotometricStereo/";
 	//int ompThreads = 4;
+	//std::string lightFileSuffix = "44";
 
 #ifdef _OPENMP
 	std::cout << "The number of processors is " << omp_get_num_procs() << std::endl;
@@ -436,7 +443,7 @@ int main(int argc, char *argv[])
 	std::cout << "The number of max threads = " << omp_get_max_threads() << std::endl;
 #endif
 
-	PhotometricStereo::test(homeDir);
+	PhotometricStereo::test(homeDir, lightFileSuffix);
 	//PhotometricStereo::testReal();
 	std::cout << "finished.\n";
 	system("pause");

@@ -522,11 +522,11 @@ namespace PhotometricStereo
 		std::cout << "elemSize: " << mat.elemSize() << "[byte]" << std::endl;
 		// 1要素内の1チャンネル分のサイズ [バイト単位]
 		std::cout << "elemSize1 (elemSize/channels): " << mat.elemSize1() << "[byte]" << std::endl;
-		// タイプ
 		std::cout << "type (ID): " << mat.type() << "(=" << CV_8UC3 << ")" << std::endl;
 		// 要素の総数
 		std::cout << "total: " << mat.total() << std::endl;
 		// ステップ数 [バイト単位]
+		// タイプ
 		std::cout << "step: " << mat.step << "[byte]" << std::endl;
 		// 1ステップ内のチャンネル総数
 		std::cout << "step1 (step/elemSize1): " << mat.step1() << std::endl;
