@@ -1,6 +1,6 @@
 for i in `seq $1 $2`
 do
-  ./build/helloworld /mnt/poplin/tmp/ammae/data/ 4 $i
-  sh ./ifttt.sh program_finished. learning $i
+  ./build/helloworld /mnt/poplin/tmp/ammae/data/ 8 $i
+  sh ./ifttt.sh $3 learning $i
 done
 
