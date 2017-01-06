@@ -419,19 +419,21 @@ namespace PhotometricStereo
 
 int main(int argc, char *argv[])
 {
-	//if (argc < 4)
-	//{
-	//	std::cout << "invalid argument.\n1:homeDir, 2:num of threads, 3:light index\n";
-	//	system("pause");
-	//	return 0;
-	//}
-	//std::string homeDir = argv[1];
-	//int ompThreads = std::stoi(argv[2]);
-	//std::string lightFileSuffix = argv[3];
-
+#ifdef _MSC_VER //if windows
 	std::string homeDir = "D:/Data/PhotometricStereo/";
 	int ompThreads = 4;
 	std::string lightFileSuffix = "0";
+#else
+	if (argc < 4)
+	{
+		std::cout << "invalid argument.\n1:homeDir, 2:num of threads, 3:light index\n";
+		system("pause");
+		return 0;
+	}
+	std::string homeDir = argv[1];
+	int ompThreads = std::stoi(argv[2]);
+	std::string lightFileSuffix = argv[3];
+#endif
 
 #ifdef _OPENMP
 	std::cout << "The number of processors is " << omp_get_num_procs() << std::endl;
