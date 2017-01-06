@@ -769,8 +769,9 @@ namespace PhotometricStereo
 		std::cout << "KnnSearch start." << std::endl;
 		boost::timer timer;
 
-		//“¯‚¶feature‚È‚Ç‚ðo—Í‚µ‚½ê‡‚É”õ‚¦‚Ä—\”õ‚É10ŒÂ‚Ìsearch‚ð‚µ‚Ä‚¨‚­
-		m_idx.knnSearch(queryMat, indices, dists, m_knnCounts + 10);
+		//“¯‚¶feature‚È‚Ç‚ðo—Í‚µ‚½ê‡‚É”õ‚¦‚Ä—\”õ‚ÉnYobiŒÂ‚Ìsearch‚ð‚µ‚Ä‚¨‚­
+		int nYobi = 10;
+		m_idx.knnSearch(queryMat, indices, dists, m_knnCounts + nYobi);
 
 		std::cout << "KnnSearch have finished.";
 		std::cout << "CalcTime:" << timer.elapsed() << "[s]\n";
@@ -848,6 +849,17 @@ namespace PhotometricStereo
 					else
 					{
 						addition++;
+						int tmpLastIndex = m_knnCounts + nYobi - 1;
+						//’TõŒÂ”‚ª—pˆÓ‚µ‚Ä‚¢‚½•ª‚ð’´‚¦‚½ê‡(d•¡‚ª‘½‚·‚¬‚éê‡)
+						if (k + addition > tmpLastIndex)
+						{
+							while (k < m_knnCounts)
+							{
+								float tempSigma = getSigma(indices(j, tmpLastIndex));
+								knnwriter << k << "," << m_responseList.at(indices(j, tmpLastIndex))->at(0) << "," << m_responseList.at(indices(j, tmpLastIndex))->at(1) << "," << m_responseList.at(indices(j, tmpLastIndex))->at(2) << "," << dists(j, tmpLastIndex) << "," << tempSigma << std::endl;
+								k++;
+							}
+						}
 					}
 				}
 			}
