@@ -11,12 +11,12 @@
 
 namespace PhotometricStereo
 {
-	bool test(std::string homeDir, std::string lightFileSuffix)
+	bool test(std::string homeDir, std::string lightFileSuffix, int windowSize)
 	{
 		using namespace boost::property_tree;
 		ptree ptBase;
 
-		int windowSize = 1;
+		//int windowSize = 1;
 		int knnCounts = 10;
 		std::string trainDir = homeDir + "/TrainData/";
 		std::string testDir = homeDir + "/TestData/";
@@ -423,16 +423,18 @@ int main(int argc, char *argv[])
 	std::string homeDir = "D:/Data/PhotometricStereo/";
 	int ompThreads = 4;
 	std::string lightFileSuffix = "0";
+	int windowSize = 1;
 #else
 	if (argc < 4)
 	{
-		std::cout << "invalid argument.\n1:homeDir, 2:num of threads, 3:light index\n";
+		std::cout << "invalid argument.\n1:homeDir, 2:num of threads, 3:light index, 4:windowSize\n";
 		system("pause");
 		return 0;
 	}
 	std::string homeDir = argv[1];
 	int ompThreads = std::stoi(argv[2]);
 	std::string lightFileSuffix = argv[3];
+	int windowSize = std::stoi(argv[4]);
 #endif
 
 #ifdef _OPENMP
@@ -445,7 +447,7 @@ int main(int argc, char *argv[])
 	std::cout << "The number of max threads = " << omp_get_max_threads() << std::endl;
 #endif
 
-	PhotometricStereo::test(homeDir, lightFileSuffix);
+	PhotometricStereo::test(homeDir, lightFileSuffix, windowSize);
 	//PhotometricStereo::testReal();
 	std::cout << "finished.\n";
 	system("pause");
