@@ -312,36 +312,49 @@ namespace PhotometricStereo
 
 	bool testReal()
 	{
-		int windowSize = 1;
+		int windowSize = 3;
 		int knnCounts = 10;
 		using namespace boost::property_tree;
 		ptree ptBase;
 
+		std::vector<std::string> inFilePathList;
+		inFilePathList.push_back("D:/Data/PhotometricStereo/TrainDataBall/snapshot00.png");
+		inFilePathList.push_back("D:/Data/PhotometricStereo/TrainData/snapshot00.png");
+		inFilePathList.push_back("D:/Data/PhotometricStereo/TrainData/snapshot05.png");
+		inFilePathList.push_back("D:/Data/PhotometricStereo/TrainData/snapshot10.png");
+		inFilePathList.push_back("D:/Data/PhotometricStereo/TrainData/snapshot15.png");
+		inFilePathList.push_back("D:/Data/PhotometricStereo/TrainData/snapshot20.png");
+
 		std::string inFilePath = "D:/Data/PhotometricStereo/TrainDataBall/snapshot00.png";
 
-		//std::string dataName = "pot1PNG";
+
+		std::string dataName = "pot1PNG";
 		//std::string dataName = "pot2PNG";
 		//std::string dataName = "catPNG";
 		//std::string dataName = "harvestPNG";
-		//std::string testDir = "D:/Data/PhotometricStereo/TestDataReal/" + dataName + "/";
-		//int nMaxImages = 96;
+		std::string testDir = "D:/Data/PhotometricStereo/TestDataReal/" + dataName + "/";
+		int nMaxImages = 96;
 
-		//bool is16bit = true;
+		bool is16bit = true;
 
 		//std::string dataName = "cat";
 		//std::string testDir = "D:/Data/PhotometricStereo/PSData/" + dataName + "/";
 		
-		std::string dataName = "rock";
-		//std::string dataName = "gray";
-		std::string testDir = "D:/Data/PhotometricStereo/psmImages_png/psmImages/" + dataName + "/";
-		int nMaxImages = 12;
+		////std::string dataName = "rock";
+		//std::string dataName = "cat";
+		////std::string dataName = "horse";
+		////std::string dataName = "owl";
+		////std::string dataName = "buddha";
+		////std::string dataName = "gray";
+		//std::string testDir = "D:/Data/PhotometricStereo/psmImages_png/psmImages/" + dataName + "/";
+		//int nMaxImages = 12;
 
-		bool is16bit = false;
+		//bool is16bit = false;
 
 
 
 		std::vector<std::string> lightnumVec;
-		lightnumVec.push_back("3");
+		//lightnumVec.push_back("3");
 		//lightnumVec.push_back("4");
 		//lightnumVec.push_back("5");
 		//lightnumVec.push_back("6");
@@ -428,7 +441,12 @@ namespace PhotometricStereo
 
 				std::cout << "training start.\n";
 				boost::timer timer;
-				learningBasedPS.syntheticImageLoader4Train(inFilePath);
+
+				for (int nTrains = 0; nTrains < inFilePathList.size(); nTrains++)
+					learningBasedPS.syntheticImageLoader4Train(inFilePathList.at(nTrains));
+
+				//learningBasedPS.syntheticImageLoader4Train(inFilePath);
+
 				std::cout << "training have finished. CalcTime:" << timer.elapsed() << "[s]\n";
 
 				learningBasedPS.train();

@@ -294,7 +294,9 @@ namespace PhotometricStereo
 			for (int x = 0; x < matEstimate.cols; x++)
 			{
 				//˜gŠO‚Å‚È‚¢‚©‚Ì”»’è
-				if (matGroundTruth.data[y * matGroundTruth.step + x * matGroundTruth.elemSize()] != 0 && matGroundTruth.data[y * matGroundTruth.step + x * matGroundTruth.elemSize() + matGroundTruth.elemSize1()] != 0)
+				if (!(matGroundTruth.data[y * matGroundTruth.step + x * matGroundTruth.elemSize()] == 0
+					&& matGroundTruth.data[y * matGroundTruth.step + x * matGroundTruth.elemSize() + matGroundTruth.elemSize1()] == 0
+					&& matGroundTruth.data[y * matGroundTruth.step + x * matGroundTruth.elemSize() + 2 * matGroundTruth.elemSize1()] == 0))
 				{
 					cv::Vec3d groundTruthVec, estimateVec;
 
@@ -363,7 +365,9 @@ namespace PhotometricStereo
 			for (int x = 0; x < matEstimate.cols; x++)
 			{
 				//˜gŠO‚Å‚È‚¢‚©‚Ì”»’è
-				if (matGroundTruth.data[y * matGroundTruth.step + x * matGroundTruth.elemSize()] != 0 && matGroundTruth.data[y * matGroundTruth.step + x * matGroundTruth.elemSize() + matGroundTruth.elemSize1()] != 0)
+				if (!(matGroundTruth.data[y * matGroundTruth.step + x * matGroundTruth.elemSize()] == 0
+					&& matGroundTruth.data[y * matGroundTruth.step + x * matGroundTruth.elemSize() + matGroundTruth.elemSize1()] == 0
+					&& matGroundTruth.data[y * matGroundTruth.step + x * matGroundTruth.elemSize() + 2 * matGroundTruth.elemSize1()] == 0))
 				{
 					cv::Vec3d groundTruthVec, estimateVec;
 
@@ -405,6 +409,8 @@ namespace PhotometricStereo
 						maxError = dError;
 
 					dError = dError / MAX_DEG;
+					if (dError > 1.0)
+						dError = 1.0;
 
 					matHeatMap.data[y * matHeatMap.step + x] = (int)(dError * 255);
 				}
